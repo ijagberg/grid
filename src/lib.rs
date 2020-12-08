@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Grid<T> {
     width: usize,
@@ -67,6 +69,50 @@ impl<T> Grid<T> {
     }
 }
 
+impl<T, I> Index<I> for Grid<T>
+where
+    GridIndex: From<I>,
+{
+    type Output = T;
+
+    fn index(&self, index: I) -> &Self::Output {
+        let index: GridIndex = GridIndex::from(index);
+
+        let linear = self.linear_idx(index).unwrap_or_else(|| {
+            panic!(
+                "index out of bounds: ({},{}), but grid is of size ({},{})",
+                index.row(),
+                index.column(),
+                self.width(),
+                self.height()
+            )
+        });
+
+        &self.data[linear]
+    }
+}
+
+impl<T, I> IndexMut<I> for Grid<T>
+where
+    GridIndex: From<I>,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        let index: GridIndex = GridIndex::from(index);
+
+        let linear = self.linear_idx(index).unwrap_or_else(|| {
+            panic!(
+                "index out of bounds: ({},{}), but grid is of size ({},{})",
+                index.row(),
+                index.column(),
+                self.width(),
+                self.height()
+            )
+        });
+
+        &mut self.data[linear]
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GridIndex {
     row: usize,
@@ -87,10 +133,26 @@ impl GridIndex {
     }
 }
 
+impl From<(usize, usize)> for GridIndex {
+    fn from((col, row): (usize, usize)) -> Self {
+        GridIndex::new(row, col)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn index_test() {
+        let grid = Grid::new(10, 10, (1..=100).collect());
+
+        let mut counter = 0;
+        for row in 0..grid.height() {
+            for col in 0..grid.width() {
+                counter += 1;
+                assert_eq!(grid[(col, row)], counter);
+            }
+        }
     }
 }
