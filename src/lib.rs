@@ -51,7 +51,7 @@ impl<T> Grid<T> {
     {
         let index: usize = self.linear_idx(GridIndex::from(idx))?;
 
-        Some(&self.data[index])
+        Some(&self.data()[index])
     }
 
     pub fn get_mut<I>(&mut self, idx: I) -> Option<&mut T>
@@ -354,9 +354,26 @@ mod tests {
 
     use super::*;
 
-    fn example_grid() -> Grid<u32> {
+    fn example_grid_u32() -> Grid<u32> {
         let grid = Grid::new(10, 10, (1..=100).collect());
 
+        println!("Grid<u32>: ");
+        println!("{}", grid);
+
+        grid
+    }
+
+    fn example_grid_string() -> Grid<String> {
+        let grid = Grid::new(
+            5,
+            2,
+            vec!["a", "aa", "aa", "aa", "a", "aaaa", "aa", "aaaaa", "aa", "a"]
+                .into_iter()
+                .map(|s| s.to_owned())
+                .collect(),
+        );
+
+        println!("Grid<String>: ");
         println!("{}", grid);
 
         grid
@@ -364,7 +381,7 @@ mod tests {
 
     #[test]
     fn index_test() {
-        let grid = example_grid();
+        let grid = example_grid_u32();
 
         let mut counter = 0;
         for row in 0..grid.height() {
@@ -377,7 +394,7 @@ mod tests {
 
     #[test]
     fn row_iter_test() {
-        let grid = example_grid();
+        let grid = example_grid_u32();
 
         let actual_items_in_row: Vec<u32> = grid.row_iter(2).copied().collect();
 
@@ -389,7 +406,7 @@ mod tests {
 
     #[test]
     fn col_iter_test() {
-        let grid = example_grid();
+        let grid = example_grid_u32();
 
         let actual_items_in_col: Vec<u32> = grid.column_iter(2).copied().collect();
 
