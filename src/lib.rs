@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Grid<T> {
@@ -9,6 +12,9 @@ pub struct Grid<T> {
 
 impl<T> Grid<T> {
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
+        if width * height == 0 {
+            panic!("width * height cannot be 0");
+        }
         if width * height != data.len() {
             panic!(
                 "width * height was {}, but must be equal to data.len(), which was {}",
@@ -60,12 +66,33 @@ impl<T> Grid<T> {
         Ok(())
     }
 
+    pub fn cell_iter<'a>(&'a self) -> CellIter<'a, T> {
+        CellIter::new(0, self)
+    }
+
+    pub fn row_iter<'a>(&'a self, row: usize) -> RowIter<'a, T> {
+        RowIter::new(row, 0, self)
+    }
+
+    pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
+        ColIter::new(column, 0, self)
+    }
+
     fn linear_idx(&self, idx: GridIndex) -> Option<usize> {
         if idx.row() >= self.height() || idx.column() >= self.width() {
             None
         } else {
             Some(idx.row() * self.width() + idx.column())
         }
+    }
+}
+
+impl<T> IntoIterator for Grid<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
     }
 }
 
@@ -113,6 +140,33 @@ where
     }
 }
 
+impl<T> Display for Grid<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // unwrap is safe here because we can't create a grid with length 0
+        let max_length = self.cell_iter().map(|c| c.to_string().len()).max().unwrap();
+        let output = (0..self.height())
+            .map(|r| {
+                (0..self.width())
+                    .map(|c| {
+                        let elem = &self[(c, r)].to_string();
+                        let padding = std::iter::repeat(" ".to_string())
+                            .take(max_length - elem.len())
+                            .collect::<String>();
+                        format!("{}{}", padding, self[(c, r)].to_string())
+                    })
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        write!(f, "{}", output)
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GridIndex {
     row: usize,
@@ -139,13 +193,111 @@ impl From<(usize, usize)> for GridIndex {
     }
 }
 
+pub struct CellIter<'a, T> {
+    current: usize,
+    grid: &'a Grid<T>,
+}
+
+impl<'a, T> CellIter<'a, T> {
+    fn new(current: usize, grid: &'a Grid<T>) -> Self {
+        Self { current, grid }
+    }
+}
+
+impl<'a, T> Iterator for CellIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.current;
+        if current >= self.grid.data.len() {
+            None
+        } else {
+            self.current = current + 1;
+            let item = &self.grid.data[current];
+            Some(item)
+        }
+    }
+}
+
+pub struct RowIter<'a, T> {
+    row: usize,
+    current_col: usize,
+    grid: &'a Grid<T>,
+}
+
+impl<'a, T> RowIter<'a, T> {
+    fn new(row: usize, current_col: usize, grid: &'a Grid<T>) -> Self {
+        Self {
+            row,
+            current_col,
+            grid,
+        }
+    }
+}
+
+impl<'a, T> Iterator for RowIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_col = self.current_col;
+        if current_col >= self.grid.width() {
+            None
+        } else {
+            self.current_col = current_col + 1;
+            let item = &self.grid[(current_col, self.row)];
+            Some(item)
+        }
+    }
+}
+
+pub struct ColIter<'a, T> {
+    col: usize,
+    current_row: usize,
+    grid: &'a Grid<T>,
+}
+
+impl<'a, T> ColIter<'a, T> {
+    fn new(col: usize, current_row: usize, grid: &'a Grid<T>) -> Self {
+        Self {
+            col,
+            current_row,
+            grid,
+        }
+    }
+}
+
+impl<'a, T> Iterator for ColIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_row = self.current_row;
+        if current_row >= self.grid.height() {
+            None
+        } else {
+            self.current_row = current_row + 1;
+            let item = &self.grid[(self.col, current_row)];
+            Some(item)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
+
+    fn example_grid() -> Grid<u32> {
+        let grid = Grid::new(10, 10, (1..=100).collect());
+
+        println!("{}", grid);
+
+        grid
+    }
 
     #[test]
     fn index_test() {
-        let grid = Grid::new(10, 10, (1..=100).collect());
+        let grid = example_grid();
 
         let mut counter = 0;
         for row in 0..grid.height() {
@@ -154,5 +306,29 @@ mod tests {
                 assert_eq!(grid[(col, row)], counter);
             }
         }
+    }
+
+    #[test]
+    fn row_iter_test() {
+        let grid = example_grid();
+
+        let actual_items_in_row: Vec<u32> = grid.row_iter(2).copied().collect();
+
+        assert_eq!(
+            actual_items_in_row,
+            vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        );
+    }
+
+    #[test]
+    fn col_iter_test() {
+        let grid = example_grid();
+
+        let actual_items_in_col: Vec<u32> = grid.column_iter(2).copied().collect();
+
+        assert_eq!(
+            actual_items_in_col,
+            vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]
+        );
     }
 }
