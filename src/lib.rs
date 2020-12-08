@@ -29,6 +29,10 @@ impl<T> Grid<T> {
         }
     }
 
+    fn data(&self) -> &Vec<T> {
+        &self.data
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }
@@ -94,10 +98,10 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `column >= self.height()`
     pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
-        if column >= self.height() {
+        if column >= self.width() {
             panic!(
-                "column index out of bounds: the height is {} but the column index is {}",
-                self.height(),
+                "column index out of bounds: the width is {} but the column index is {}",
+                self.width(),
                 column
             );
         }
@@ -110,6 +114,17 @@ impl<T> Grid<T> {
         } else {
             Some(idx.row() * self.width() + idx.column())
         }
+    }
+}
+
+impl<T> Grid<T>
+where
+    T: Default,
+{
+    /// Create a grid filled with default values
+    pub fn new_default(width: usize, height: usize) -> Grid<T> {
+        let data = (0..width * height).map(|_| T::default()).collect();
+        Self::new(width, height, data)
     }
 }
 
@@ -382,5 +397,12 @@ mod tests {
             actual_items_in_col,
             vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]
         );
+    }
+
+    #[test]
+    fn new_default_test() {
+        let grid: Grid<u32> = Grid::new_default(10, 1);
+
+        assert_eq!(grid.data(), &vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]);
     }
 }
