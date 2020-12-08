@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, PartialEq)]
 pub struct Grid<T> {
     width: usize,
     height: usize,
@@ -44,7 +45,7 @@ impl<T> Grid<T> {
         let index: usize = self.linear_idx(GridIndex::from(idx)).ok_or(())?;
 
         self.data[index] = item;
-        
+
         Ok(())
     }
 
@@ -57,6 +58,7 @@ impl<T> Grid<T> {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GridIndex {
     row: usize,
     column: usize,
