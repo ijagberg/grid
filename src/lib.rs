@@ -38,6 +38,15 @@ impl<T> Grid<T> {
         Some(&self.data[index])
     }
 
+    pub fn get_mut<I>(&mut self, idx: I) -> Option<&mut T>
+    where
+        GridIndex: From<I>,
+    {
+        let index: usize = self.linear_idx(GridIndex::from(idx))?;
+
+        Some(&mut self.data[index])
+    }
+
     pub fn set<I>(&mut self, idx: I, item: T) -> Result<(), ()>
     where
         GridIndex: From<I>,
