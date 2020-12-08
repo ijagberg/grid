@@ -37,6 +37,10 @@ impl<T> Grid<T> {
         self.height
     }
 
+    pub fn area(&self) -> usize {
+        self.width() * self.height()
+    }
+
     pub fn get<I>(&self, idx: I) -> Option<&T>
     where
         GridIndex: From<I>,
@@ -70,11 +74,33 @@ impl<T> Grid<T> {
         CellIter::new(0, self)
     }
 
+    /// Return an iterator over the columns in `row`
+    ///
+    /// # Panics
+    /// * If `row >= self.height()`
     pub fn row_iter<'a>(&'a self, row: usize) -> RowIter<'a, T> {
+        if row >= self.height() {
+            panic!(
+                "row index out of bounds: the height is {} but the row index is {}",
+                self.height(),
+                row
+            );
+        }
         RowIter::new(row, 0, self)
     }
 
+    /// Return an iterator over the rows in `column`
+    ///
+    /// # Panics
+    /// * If `column >= self.height()`
     pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
+        if column >= self.height() {
+            panic!(
+                "column index out of bounds: the height is {} but the column index is {}",
+                self.height(),
+                column
+            );
+        }
         ColIter::new(column, 0, self)
     }
 
@@ -240,10 +266,23 @@ impl<'a, T> Iterator for RowIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current_col = self.current_col;
-        if current_col >= self.grid.width() {
+        if current_col == self.grid.width() {
             None
         } else {
             self.current_col = current_col + 1;
+            let item = &self.grid[(current_col, self.row)];
+            Some(item)
+        }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for RowIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let current_col = self.current_col;
+        if current_col == 0 {
+            None
+        } else {
+            self.current_col = current_col - 1;
             let item = &self.grid[(current_col, self.row)];
             Some(item)
         }
@@ -271,10 +310,23 @@ impl<'a, T> Iterator for ColIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current_row = self.current_row;
-        if current_row >= self.grid.height() {
+        if current_row == self.grid.height() {
             None
         } else {
             self.current_row = current_row + 1;
+            let item = &self.grid[(self.col, current_row)];
+            Some(item)
+        }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for ColIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let current_row = self.current_row;
+        if current_row == 0 {
+            None
+        } else {
+            self.current_row = current_row - 1;
             let item = &self.grid[(self.col, current_row)];
             Some(item)
         }
