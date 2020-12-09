@@ -108,6 +108,41 @@ impl<T> Grid<T> {
         ColIter::new(column, 0, self)
     }
 
+    pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) -> Result<(), ()> {
+        if row_contents.len() != self.width() {
+            return Err(());
+        }
+
+        let start_idx = self.linear_idx(GridIndex::new(row, 0)).ok_or(())?;
+
+        for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
+            self.data.insert(idx, elem);
+        }
+
+        self.height += 1;
+        Ok(())
+    }
+
+    pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) -> Result<(), ()> {
+        if column_contents.len() != self.height() {
+            return Err(());
+        }
+
+        let indices: Vec<usize> = (0..column_contents.len())
+            .map(|row| self.linear_idx(GridIndex::new(row, column)).ok_or(()))
+            .collect::<Result<_, _>>()?;
+
+        for (offset, (elem, idx)) in column_contents
+            .into_iter()
+            .zip(indices.into_iter())
+            .enumerate()
+        {
+            self.data.insert(idx + offset, elem);
+        }
+        self.width += 1;
+        Ok(())
+    }
+
     fn linear_idx(&self, idx: GridIndex) -> Option<usize> {
         if idx.row() >= self.height() || idx.column() >= self.width() {
             None
@@ -421,5 +456,43 @@ mod tests {
         let grid: Grid<u32> = Grid::new_default(10, 1);
 
         assert_eq!(grid.data(), &vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]);
+    }
+
+    #[test]
+    fn add_row_test() {
+        let mut grid = example_grid_u32();
+
+        let items_in_row_1: Vec<u32> = grid.row_iter(1).copied().collect();
+
+        assert_eq!(items_in_row_1, vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+        assert_eq!(grid.height(), 10);
+
+        grid.add_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+            .unwrap();
+        assert_eq!(grid.height(), 11);
+    }
+
+    #[test]
+    fn add_column_test() {
+        let mut grid = example_grid_u32();
+
+        let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
+
+        assert_eq!(
+            items_in_column_1,
+            vec![2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
+        );
+        assert_eq!(grid.width(), 10);
+
+        grid.add_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2])
+            .unwrap();
+
+        let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
+
+        assert_eq!(items_in_column_1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
+        assert_eq!(grid.width(), 11);
+
+        println!("After adding a column: ");
+        println!("{}", grid);
     }
 }
