@@ -49,7 +49,7 @@ impl<T> Grid<T> {
     where
         GridIndex: From<I>,
     {
-        let index: usize = self.linear_idx(GridIndex::from(idx))?;
+        let index: usize = self.linear_idx(GridIndex::from(idx)).ok()?;
 
         Some(&self.data()[index])
     }
@@ -58,20 +58,9 @@ impl<T> Grid<T> {
     where
         GridIndex: From<I>,
     {
-        let index: usize = self.linear_idx(GridIndex::from(idx))?;
+        let index: usize = self.linear_idx(GridIndex::from(idx)).ok()?;
 
         Some(&mut self.data[index])
-    }
-
-    pub fn set<I>(&mut self, idx: I, item: T) -> Result<(), ()>
-    where
-        GridIndex: From<I>,
-    {
-        let index: usize = self.linear_idx(GridIndex::from(idx)).ok_or(())?;
-
-        self.data[index] = item;
-
-        Ok(())
     }
 
     pub fn cell_iter<'a>(&'a self) -> CellIter<'a, T> {
@@ -83,13 +72,7 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `row >= self.height()`
     pub fn row_iter<'a>(&'a self, row: usize) -> RowIter<'a, T> {
-        if row >= self.height() {
-            panic!(
-                "row index out of bounds: the height is {} but the row index is {}",
-                self.height(),
-                row
-            );
-        }
+        self.panic_if_row_out_of_bounds(row);
         RowIter::new(row, 0, self)
     }
 
@@ -98,39 +81,54 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `column >= self.height()`
     pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
-        if column >= self.width() {
-            panic!(
-                "column index out of bounds: the width is {} but the column index is {}",
-                self.width(),
-                column
-            );
-        }
+        self.panic_if_column_out_of_bounds(column);
         ColIter::new(column, 0, self)
     }
 
-    pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) -> Result<(), ()> {
+    /// Add a row at index `row`, moving all other rows backwards (row n becomes row n+1 and so on)
+    ///
+    /// # Panics
+    /// * If `row_contents.len() != self.width()`
+    /// * If `row >= self.height()`
+    pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) {
         if row_contents.len() != self.width() {
-            return Err(());
+            panic!(
+                "invalid length of row: was {}, should be {}",
+                row_contents.len(),
+                self.width()
+            );
         }
 
-        let start_idx = self.linear_idx(GridIndex::new(row, 0)).ok_or(())?;
+        self.panic_if_row_out_of_bounds(row);
+
+        let start_idx = self.linear_idx(GridIndex::new(row, 0)).unwrap();
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
         }
 
         self.height += 1;
-        Ok(())
     }
 
-    pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) -> Result<(), ()> {
+    /// Add a column at index `column`, moving all other columns backwards (column n becomes column n+1 and so on)
+    ///
+    /// # Panics
+    /// * If `column_contents.len() != self.height()`
+    /// * If `column >= self.width()`
+    pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) {
         if column_contents.len() != self.height() {
-            return Err(());
+            panic!(
+                "invalid length of column: was {}, should be {}",
+                column_contents.len(),
+                self.height()
+            );
         }
 
+        self.panic_if_column_out_of_bounds(column);
+
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| self.linear_idx(GridIndex::new(row, column)).ok_or(()))
-            .collect::<Result<_, _>>()?;
+            .map(|row| self.linear_idx(GridIndex::new(row, column)).unwrap())
+            .collect();
 
         for (offset, (elem, idx)) in column_contents
             .into_iter()
@@ -140,14 +138,35 @@ impl<T> Grid<T> {
             self.data.insert(idx + offset, elem);
         }
         self.width += 1;
-        Ok(())
     }
 
-    fn linear_idx(&self, idx: GridIndex) -> Option<usize> {
-        if idx.row() >= self.height() || idx.column() >= self.width() {
-            None
+    fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
+        if idx.row() >= self.height() {
+            Err(LinearIndexError::RowTooHigh)
+        } else if idx.column() >= self.width() {
+            Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Some(idx.row() * self.width() + idx.column())
+            Ok(idx.row() * self.width() + idx.column())
+        }
+    }
+
+    fn panic_if_row_out_of_bounds(&self, row: usize) {
+        if row >= self.height() {
+            panic!(
+                "row index out of bounds: the height is {} but the row index is {}",
+                self.height(),
+                row
+            );
+        }
+    }
+
+    fn panic_if_column_out_of_bounds(&self, column: usize) {
+        if column >= self.width() {
+            panic!(
+                "column index out of bounds: the width is {} but the column index is {}",
+                self.width(),
+                column
+            );
         }
     }
 }
@@ -181,15 +200,7 @@ where
     fn index(&self, index: I) -> &Self::Output {
         let index: GridIndex = GridIndex::from(index);
 
-        let linear = self.linear_idx(index).unwrap_or_else(|| {
-            panic!(
-                "index out of bounds: ({},{}), but grid is of size ({},{})",
-                index.row(),
-                index.column(),
-                self.width(),
-                self.height()
-            )
-        });
+        let linear = self.linear_idx(index).unwrap();
 
         &self.data[linear]
     }
@@ -202,15 +213,7 @@ where
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         let index: GridIndex = GridIndex::from(index);
 
-        let linear = self.linear_idx(index).unwrap_or_else(|| {
-            panic!(
-                "index out of bounds: ({},{}), but grid is of size ({},{})",
-                index.row(),
-                index.column(),
-                self.width(),
-                self.height()
-            )
-        });
+        let linear = self.linear_idx(index).unwrap();
 
         &mut self.data[linear]
     }
@@ -383,6 +386,23 @@ impl<'a, T> DoubleEndedIterator for ColIter<'a, T> {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum LinearIndexError {
+    RowTooHigh,
+    ColumnTooHigh,
+}
+
+impl Display for LinearIndexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match self {
+            LinearIndexError::RowTooHigh => "row index is too high",
+            LinearIndexError::ColumnTooHigh => "column index is too high",
+        };
+
+        write!(f, "{}", output)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::vec;
@@ -467,8 +487,7 @@ mod tests {
         assert_eq!(items_in_row_1, vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
         assert_eq!(grid.height(), 10);
 
-        grid.add_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
-            .unwrap();
+        grid.add_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
         assert_eq!(grid.height(), 11);
     }
 
@@ -484,15 +503,11 @@ mod tests {
         );
         assert_eq!(grid.width(), 10);
 
-        grid.add_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2])
-            .unwrap();
+        grid.add_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
 
         let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
 
         assert_eq!(items_in_column_1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
         assert_eq!(grid.width(), 11);
-
-        println!("After adding a column: ");
-        println!("{}", grid);
     }
 }
