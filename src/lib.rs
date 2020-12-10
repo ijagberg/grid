@@ -404,6 +404,7 @@ impl Display for LinearIndexError {
 }
 
 #[cfg(test)]
+#[allow(unused)]
 mod tests {
     use std::vec;
 
