@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Grid<T> {
     width: usize,
     height: usize,
@@ -11,6 +11,11 @@ pub struct Grid<T> {
 }
 
 impl<T> Grid<T> {
+    /// Construct a new Grid
+    ///
+    /// # Panics
+    /// * If `width * height == 0`
+    /// * If `width * height != data.len()`
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
         if width * height == 0 {
             panic!("width * height cannot be 0");
@@ -33,18 +38,24 @@ impl<T> Grid<T> {
         &self.data
     }
 
+    /// Returns the width (number of columns) of the grid
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Returns the height (number of rows) of the grid
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// Returns the area (number of columns * number of rows) of the grid
     pub fn area(&self) -> usize {
         self.width() * self.height()
     }
 
+    /// Attempts to get a reference to the element at `idx`
+    ///
+    /// Returns `None` if `idx` is out of bounds
     pub fn get<I>(&self, idx: I) -> Option<&T>
     where
         GridIndex: From<I>,
@@ -54,6 +65,9 @@ impl<T> Grid<T> {
         Some(&self.data()[index])
     }
 
+    /// Attempts to get a mutable reference to the element at `idx`
+    ///
+    /// Returns `None` if `idx` is out of bounds
     pub fn get_mut<I>(&mut self, idx: I) -> Option<&mut T>
     where
         GridIndex: From<I>,
