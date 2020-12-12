@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct Grid<T> {
     width: usize,
     height: usize,
@@ -36,6 +36,14 @@ impl<T> Grid<T> {
 
     fn data(&self) -> &Vec<T> {
         &self.data
+    }
+
+    fn set_height(&mut self, v: usize) {
+        self.height = v;
+    }
+
+    fn set_width(&mut self, v: usize) {
+        self.width = v;
     }
 
     /// Returns the width (number of columns) of the grid
@@ -121,7 +129,19 @@ impl<T> Grid<T> {
             self.data.insert(idx, elem);
         }
 
-        self.height += 1;
+        self.set_height(self.height() + 1);
+    }
+
+    pub fn remove_row(&mut self, row: usize) {
+        if self.height() == 1 {
+            panic!("can't remove row if height is 1");
+        }
+        self.panic_if_row_out_of_bounds(row);
+
+        let start_idx = self.linear_idx(GridIndex::new(row, 0)).unwrap();
+
+        self.data.drain(start_idx..start_idx + self.width());
+        self.set_height(self.height() - 1);
     }
 
     /// Add a column at index `column`, moving all other columns backwards (column n becomes column n+1 and so on)
@@ -144,14 +164,28 @@ impl<T> Grid<T> {
             .map(|row| self.linear_idx(GridIndex::new(row, column)).unwrap())
             .collect();
 
-        for (offset, (elem, idx)) in column_contents
-            .into_iter()
-            .zip(indices.into_iter())
-            .enumerate()
-        {
-            self.data.insert(idx + offset, elem);
+        for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()).rev() {
+            self.data.insert(idx, elem);
         }
-        self.width += 1;
+
+        self.set_width(self.width() + 1);
+    }
+
+    pub fn remove_column(&mut self, column: usize) {
+        if self.width() == 1 {
+            panic!("can't remove column if width is 1");
+        }
+        self.panic_if_column_out_of_bounds(column);
+
+        let indices: Vec<usize> = (0..self.height())
+            .map(|row| self.linear_idx(GridIndex::new(row, column)).unwrap())
+            .collect();
+
+        for idx in indices.into_iter().rev() {
+            self.data.remove(idx);
+        }
+
+        self.set_width(self.width() - 1);
     }
 
     fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
@@ -507,6 +541,18 @@ mod tests {
     }
 
     #[test]
+    fn remove_row_test() {
+        let mut grid = example_grid_string();
+        let items_in_row_1: Vec<_> = grid.row_iter(1).cloned().collect();
+
+        assert_eq!(items_in_row_1, vec!["aaaa", "aa", "aaaaa", "aa", "a"]);
+        assert_eq!(grid.height(), 2);
+
+        grid.remove_row(1);
+        assert_eq!(grid.height(), 1);
+    }
+
+    #[test]
     fn add_column_test() {
         let mut grid = example_grid_u32();
 
@@ -524,5 +570,19 @@ mod tests {
 
         assert_eq!(items_in_column_1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
         assert_eq!(grid.width(), 11);
+    }
+
+    #[test]
+    fn remove_column_test() {
+        let mut grid = example_grid_string();
+        let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
+
+        assert_eq!(items_in_column_1, vec!["aa", "aa"]);
+        assert_eq!(grid.width(), 5);
+
+        grid.remove_column(1);
+        let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
+        assert_eq!(items_in_column_1, vec!["aa", "aaaaa"]);
+        assert_eq!(grid.width(), 4);
     }
 }
