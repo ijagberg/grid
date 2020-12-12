@@ -132,6 +132,11 @@ impl<T> Grid<T> {
         self.set_height(self.height() + 1);
     }
 
+    /// Remove row at `row`, shifting all rows with higher indices "upward" (row 4 becomes row 3 etc.)
+    ///
+    /// # Panics
+    /// * If `self.height() == 1`
+    /// * If `row >= self.height()`
     pub fn remove_row(&mut self, row: usize) {
         if self.height() == 1 {
             panic!("can't remove row if height is 1");
@@ -171,6 +176,11 @@ impl<T> Grid<T> {
         self.set_width(self.width() + 1);
     }
 
+    /// Remove column at `column`, shifting all columns with higher indices "left" (column 4 becomes column 3 etc.)
+    ///
+    /// # Panics
+    /// * If `self.width() == 1`
+    /// * If `column >= self.width()`
     pub fn remove_column(&mut self, column: usize) {
         if self.width() == 1 {
             panic!("can't remove column if width is 1");
