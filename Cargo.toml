@@ -1,9 +1,11 @@
 [package]
-name = "grid"
+name = "simple-grid"
 version = "0.1.0"
 authors = ["Isak Jägberg <ijagberg@gmail.com>"]
 edition = "2018"
+license = "MIT"
+keywords = ["2d", "array", "grid", "map"]
+categories = ["data-structures"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]

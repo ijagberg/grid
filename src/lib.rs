@@ -497,6 +497,8 @@ mod tests {
     fn index_test() {
         let grid = example_grid_u32();
 
+        assert_eq!(grid.get((5, 2)).unwrap(), &26);
+
         let mut counter = 0;
         for row in 0..grid.height() {
             for col in 0..grid.width() {
