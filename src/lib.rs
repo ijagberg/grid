@@ -109,7 +109,7 @@ impl<T> Grid<T> {
     /// Return an iterator over the rows in `column`
     ///
     /// # Panics
-    /// * If `column >= self.height()`
+    /// * If `column >= self.width()`
     ///
     /// # Example
     /// ```
