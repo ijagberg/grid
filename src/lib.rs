@@ -93,6 +93,14 @@ impl<T> Grid<T> {
     ///
     /// # Panics
     /// * If `row >= self.height()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(10, 10, (1..=100).collect());
+    /// let items_in_row_2: Vec<u32> = grid.row_iter(2).cloned().collect();
+    /// assert_eq!(items_in_row_2, vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30]);
+    /// ```
     pub fn row_iter<'a>(&'a self, row: usize) -> RowIter<'a, T> {
         self.panic_if_row_out_of_bounds(row);
         RowIter::new(row, 0, self)
@@ -102,6 +110,14 @@ impl<T> Grid<T> {
     ///
     /// # Panics
     /// * If `column >= self.height()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(10, 10, (1..=100).collect());
+    /// let items_in_column_2: Vec<u32> = grid.column_iter(2).cloned().collect();
+    /// assert_eq!(items_in_column_2, vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]);
+    /// ```
     pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
         self.panic_if_column_out_of_bounds(column);
         ColIter::new(column, 0, self)
