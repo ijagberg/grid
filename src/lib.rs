@@ -247,6 +247,43 @@ impl<T> Grid<T> {
 
 impl<T> Grid<T>
 where
+    T: Clone,
+{
+    pub fn rotate_ccw(&self) -> Self {
+        let mut rotated_data = Vec::with_capacity(self.area());
+
+        for column in (0..self.width()).rev() {
+            for row in 0..self.height() {
+                rotated_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.height(), self.width(), rotated_data)
+    }
+
+    pub fn rotate_cw(&self) -> Self {
+        let mut rotated_data = Vec::with_capacity(self.area());
+
+        for column in 0..self.width() {
+            for row in (0..self.height()).rev() {
+                rotated_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.height(), self.width(), rotated_data)
+    }
+
+    pub fn flip_horizontally(&self) -> Self {
+        todo!();
+    }
+
+    pub fn flip_vertically(&self) -> Self {
+        todo!();
+    }
+}
+
+impl<T> Grid<T>
+where
     T: Default,
 {
     /// Create a grid filled with default values
@@ -509,6 +546,15 @@ mod tests {
         grid
     }
 
+    fn small_example_grid() -> Grid<char> {
+        let grid = Grid::new(2, 3, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+
+        println!("Grid<char>: ");
+        println!("{}", grid);
+
+        grid
+    }
+
     #[test]
     fn index_test() {
         let grid = example_grid_u32();
@@ -612,5 +658,23 @@ mod tests {
         let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
         assert_eq!(items_in_column_1, vec!["aa", "aaaaa"]);
         assert_eq!(grid.width(), 4);
+    }
+
+    #[test]
+    fn rotate_cw_test() {
+        let grid = small_example_grid();
+
+        let rotated = grid.rotate_cw();
+
+        assert_eq!(rotated, Grid::new(3, 2, vec!['e', 'c', 'a', 'f', 'd', 'b']));
+    }
+
+    #[test]
+    fn rotate_ccw_test() {
+        let grid = small_example_grid();
+
+        let rotated = grid.rotate_ccw();
+
+        assert_eq!(rotated, Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
     }
 }
