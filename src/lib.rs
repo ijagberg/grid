@@ -249,18 +249,23 @@ impl<T> Grid<T>
 where
     T: Clone,
 {
-    pub fn rotate_ccw(&self) -> Self {
-        let mut rotated_data = Vec::with_capacity(self.area());
-
-        for column in (0..self.width()).rev() {
-            for row in 0..self.height() {
-                rotated_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.height(), self.width(), rotated_data)
-    }
-
+    /// Rotate the grid clockwise 90 degrees, cloning the data into a new grid
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// 
+    /// let cw = grid.rotate_cw();
+    /// assert_eq!(cw, Grid::new(2, 2, vec!['c', 'a', 'd', 'b']));
+    /// println!("{}", cw);
+    /// // prints:
+    /// // c a
+    /// // d b
+    /// ```
     pub fn rotate_cw(&self) -> Self {
         let mut rotated_data = Vec::with_capacity(self.area());
 
@@ -273,6 +278,52 @@ where
         Self::new(self.height(), self.width(), rotated_data)
     }
 
+    /// Rotate the grid counter-clockwise 90 degrees, cloning the data into a new grid
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// 
+    /// let ccw = grid.rotate_ccw();
+    /// assert_eq!(ccw, Grid::new(2, 2, vec!['b', 'd', 'a', 'c']));
+    /// println!("{}", ccw);
+    /// // prints:
+    /// // b d
+    /// // a c
+    /// ```
+    pub fn rotate_ccw(&self) -> Self {
+        let mut rotated_data = Vec::with_capacity(self.area());
+
+        for column in (0..self.width()).rev() {
+            for row in 0..self.height() {
+                rotated_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.height(), self.width(), rotated_data)
+    }
+
+    /// Flip the grid horizontally, so that the first column becomes the last
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// 
+    /// let hori = grid.flip_horizontally();
+    /// assert_eq!(hori, Grid::new(2, 2, vec!['b', 'a', 'd', 'c']));
+    /// println!("{}", hori);
+    /// // prints:
+    /// // b a
+    /// // d c
+    /// ```
     pub fn flip_horizontally(&self) -> Self {
         let mut flipped_data = Vec::with_capacity(self.area());
 
@@ -285,6 +336,23 @@ where
         Self::new(self.width(), self.height(), flipped_data)
     }
 
+    /// Flip the grid vertically, so that the first row becomes the last
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// 
+    /// let vert = grid.flip_vertically();
+    /// assert_eq!(vert, Grid::new(2, 2, vec!['c', 'd', 'a', 'b']));
+    /// println!("{}", vert);
+    /// // prints:
+    /// // c d
+    /// // a b
+    /// ```
     pub fn flip_vertically(&self) -> Self {
         let mut flipped_data = Vec::with_capacity(self.area());
 
