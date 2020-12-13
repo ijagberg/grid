@@ -128,6 +128,19 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `row_contents.len() != self.width()`
     /// * If `row >= self.height()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// grid.add_row(1, vec!['x', 'x']);
+    /// assert_eq!(grid, Grid::new(2, 3, vec!['a', 'b', 'x', 'x', 'c', 'd']));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // x x
+    /// // c d
+    /// ```
     pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) {
         if row_contents.len() != self.width() {
             panic!(
@@ -153,6 +166,17 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `self.height() == 1`
     /// * If `row >= self.height()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// grid.remove_row(1);
+    /// assert_eq!(grid, Grid::new(2, 1, vec!['a', 'b']));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// ```
     pub fn remove_row(&mut self, row: usize) {
         if self.height() == 1 {
             panic!("can't remove row if height is 1");
@@ -170,6 +194,18 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `column_contents.len() != self.height()`
     /// * If `column >= self.width()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// grid.add_column(1, vec!['x', 'x']);
+    /// assert_eq!(grid, Grid::new(3, 2, vec!['a', 'x', 'b', 'c', 'x', 'd']));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a x b
+    /// // c x d
+    /// ```
     pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) {
         if column_contents.len() != self.height() {
             panic!(
@@ -197,6 +233,18 @@ impl<T> Grid<T> {
     /// # Panics
     /// * If `self.width() == 1`
     /// * If `column >= self.width()`
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// grid.remove_column(1);
+    /// assert_eq!(grid, Grid::new(1, 2, vec!['a', 'c']));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a
+    /// // c
+    /// ```
     pub fn remove_column(&mut self, column: usize) {
         if self.width() == 1 {
             panic!("can't remove column if width is 1");
@@ -258,7 +306,7 @@ where
     /// // prints:
     /// // a b
     /// // c d
-    /// 
+    ///
     /// let cw = grid.rotate_cw();
     /// assert_eq!(cw, Grid::new(2, 2, vec!['c', 'a', 'd', 'b']));
     /// println!("{}", cw);
@@ -287,7 +335,7 @@ where
     /// // prints:
     /// // a b
     /// // c d
-    /// 
+    ///
     /// let ccw = grid.rotate_ccw();
     /// assert_eq!(ccw, Grid::new(2, 2, vec!['b', 'd', 'a', 'c']));
     /// println!("{}", ccw);
@@ -316,7 +364,7 @@ where
     /// // prints:
     /// // a b
     /// // c d
-    /// 
+    ///
     /// let hori = grid.flip_horizontally();
     /// assert_eq!(hori, Grid::new(2, 2, vec!['b', 'a', 'd', 'c']));
     /// println!("{}", hori);
@@ -345,7 +393,7 @@ where
     /// // prints:
     /// // a b
     /// // c d
-    /// 
+    ///
     /// let vert = grid.flip_vertically();
     /// assert_eq!(vert, Grid::new(2, 2, vec!['c', 'd', 'a', 'b']));
     /// println!("{}", vert);
