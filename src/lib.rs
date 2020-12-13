@@ -274,11 +274,27 @@ where
     }
 
     pub fn flip_horizontally(&self) -> Self {
-        todo!();
+        let mut flipped_data = Vec::with_capacity(self.area());
+
+        for row in 0..self.height() {
+            for column in (0..self.width()).rev() {
+                flipped_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.width(), self.height(), flipped_data)
     }
 
     pub fn flip_vertically(&self) -> Self {
-        todo!();
+        let mut flipped_data = Vec::with_capacity(self.area());
+
+        for row in (0..self.height()).rev() {
+            for column in 0..self.width() {
+                flipped_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.width(), self.height(), flipped_data)
     }
 }
 
@@ -676,5 +692,23 @@ mod tests {
         let rotated = grid.rotate_ccw();
 
         assert_eq!(rotated, Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
+    }
+
+    #[test]
+    fn flip_horizontally_test() {
+        let grid = small_example_grid();
+
+        let flipped = grid.flip_horizontally();
+
+        assert_eq!(flipped, Grid::new(2, 3, vec!['b', 'a', 'd', 'c', 'f', 'e']));
+    }
+
+    #[test]
+    fn flip_vertically_test() {
+        let grid = small_example_grid();
+
+        let flipped = grid.flip_vertically();
+
+        assert_eq!(flipped, Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
     }
 }
