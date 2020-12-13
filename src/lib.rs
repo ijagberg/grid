@@ -14,12 +14,8 @@ impl<T> Grid<T> {
     /// Construct a new Grid
     ///
     /// # Panics
-    /// * If `width * height == 0`
     /// * If `width * height != data.len()`
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
-        if width * height == 0 {
-            panic!("width * height cannot be 0");
-        }
         if width * height != data.len() {
             panic!(
                 "width * height was {}, but must be equal to data.len(), which was {}",
@@ -44,6 +40,15 @@ impl<T> Grid<T> {
 
     fn set_width(&mut self, v: usize) {
         self.width = v;
+    }
+
+    fn is_empty(&self) -> bool {
+        let ans = self.width() == 0 || self.height() == 0;
+        if ans {
+            debug_assert!(self.width() == 0);
+            debug_assert!(self.height() == 0);
+        }
+        ans
     }
 
     /// Returns the width (number of columns) of the grid
@@ -126,6 +131,7 @@ impl<T> Grid<T> {
     /// Add a row at index `row`, moving all other rows backwards (row n becomes row n+1 and so on)
     ///
     /// # Panics
+    /// * If `row_contents.is_empty()`
     /// * If `row_contents.len() != self.width()`
     /// * If `row >= self.height()`
     ///
@@ -142,6 +148,18 @@ impl<T> Grid<T> {
     /// // c d
     /// ```
     pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) {
+        if row_contents.is_empty() {
+            panic!("row can't be empty");
+        }
+
+        if self.is_empty() && row == 0 {
+            // special case, add a row regardless of bounds and set width
+            self.set_width(row_contents.len());
+            self.set_height(1);
+            self.data = row_contents;
+            return;
+        }
+
         if row_contents.len() != self.width() {
             panic!(
                 "invalid length of row: was {}, should be {}",
@@ -164,7 +182,6 @@ impl<T> Grid<T> {
     /// Remove row at `row`, shifting all rows with higher indices "upward" (row 4 becomes row 3 etc.)
     ///
     /// # Panics
-    /// * If `self.height() == 1`
     /// * If `row >= self.height()`
     ///
     /// # Example
@@ -178,20 +195,22 @@ impl<T> Grid<T> {
     /// // a b
     /// ```
     pub fn remove_row(&mut self, row: usize) {
-        if self.height() == 1 {
-            panic!("can't remove row if height is 1");
-        }
         self.panic_if_row_out_of_bounds(row);
 
         let start_idx = self.linear_idx(GridIndex::new(row, 0)).unwrap();
 
         self.data.drain(start_idx..start_idx + self.width());
         self.set_height(self.height() - 1);
+
+        if self.height() == 0 {
+            self.set_width(0);
+        }
     }
 
     /// Add a column at index `column`, moving all other columns backwards (column n becomes column n+1 and so on)
     ///
     /// # Panics
+    /// * If `column_contents.is_empty()`
     /// * If `column_contents.len() != self.height()`
     /// * If `column >= self.width()`
     ///
@@ -207,6 +226,16 @@ impl<T> Grid<T> {
     /// // c x d
     /// ```
     pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) {
+        if column_contents.is_empty() {
+            panic!("column can't be empty");
+        }
+
+        if self.is_empty() && column == 0 {
+            self.set_height(column_contents.len());
+            self.set_width(1);
+            self.data = column_contents;
+            return;
+        }
         if column_contents.len() != self.height() {
             panic!(
                 "invalid length of column: was {}, should be {}",
@@ -231,7 +260,6 @@ impl<T> Grid<T> {
     /// Remove column at `column`, shifting all columns with higher indices "left" (column 4 becomes column 3 etc.)
     ///
     /// # Panics
-    /// * If `self.width() == 1`
     /// * If `column >= self.width()`
     ///
     /// # Example
@@ -246,9 +274,6 @@ impl<T> Grid<T> {
     /// // c
     /// ```
     pub fn remove_column(&mut self, column: usize) {
-        if self.width() == 1 {
-            panic!("can't remove column if width is 1");
-        }
         self.panic_if_column_out_of_bounds(column);
 
         let indices: Vec<usize> = (0..self.height())
@@ -260,6 +285,10 @@ impl<T> Grid<T> {
         }
 
         self.set_width(self.width() - 1);
+
+        if self.width() == 0 {
+            self.set_height(0);
+        }
     }
 
     fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
@@ -654,6 +683,16 @@ mod tests {
     use super::*;
 
     fn example_grid_u32() -> Grid<u32> {
+        // 1   2   3   4   5   6   7   8   9  10
+        // 11  12  13  14  15  16  17  18  19  20
+        // 21  22  23  24  25  26  27  28  29  30
+        // 31  32  33  34  35  36  37  38  39  40
+        // 41  42  43  44  45  46  47  48  49  50
+        // 51  52  53  54  55  56  57  58  59  60
+        // 61  62  63  64  65  66  67  68  69  70
+        // 71  72  73  74  75  76  77  78  79  80
+        // 81  82  83  84  85  86  87  88  89  90
+        // 91  92  93  94  95  96  97  98  99 100
         let grid = Grid::new(10, 10, (1..=100).collect());
 
         println!("Grid<u32>: ");
@@ -663,6 +702,8 @@ mod tests {
     }
 
     fn example_grid_string() -> Grid<String> {
+        //    a    aa    aa    aa     a
+        // aaaa    aa aaaaa    aa     a
         let grid = Grid::new(
             5,
             2,
@@ -679,6 +720,9 @@ mod tests {
     }
 
     fn small_example_grid() -> Grid<char> {
+        // a b
+        // c d
+        // e f
         let grid = Grid::new(2, 3, vec!['a', 'b', 'c', 'd', 'e', 'f']);
 
         println!("Grid<char>: ");
@@ -759,6 +803,25 @@ mod tests {
     }
 
     #[test]
+    fn remove_row_until_empty_test() {
+        let mut grid = small_example_grid();
+
+        grid.remove_row(0);
+        grid.remove_row(0);
+        grid.remove_row(0);
+
+        assert_eq!(grid, Grid::new(0, 0, Vec::new()));
+        assert_eq!(grid.height(), 0);
+        assert_eq!(grid.width(), 0);
+        assert!(grid.is_empty());
+
+        // since the grid is now empty, we can add a row of any non-zero length
+        grid.add_row(0, vec!['a', 'b', 'c']);
+
+        assert_eq!(grid, Grid::new(3, 1, vec!['a', 'b', 'c']));
+    }
+
+    #[test]
     fn add_column_test() {
         let mut grid = example_grid_u32();
 
@@ -790,6 +853,24 @@ mod tests {
         let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
         assert_eq!(items_in_column_1, vec!["aa", "aaaaa"]);
         assert_eq!(grid.width(), 4);
+    }
+
+    #[test]
+    fn remove_column_until_empty_test() {
+        let mut grid = small_example_grid();
+
+        grid.remove_column(0);
+        grid.remove_column(0);
+
+        assert_eq!(grid, Grid::new(0, 0, Vec::new()));
+        assert_eq!(grid.height(), 0);
+        assert_eq!(grid.width(), 0);
+        assert!(grid.is_empty());
+
+        // since the grid is now empty, we can add a column of any non-zero length
+        grid.add_column(0, vec!['a', 'b', 'c']);
+
+        assert_eq!(grid, Grid::new(1, 3, vec!['a', 'b', 'c']));
     }
 
     #[test]
