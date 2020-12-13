@@ -13,6 +13,18 @@ pub struct Grid<T> {
 impl<T> Grid<T> {
     /// Construct a new Grid
     ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// // construct a 2x3 (width x height) grid of chars
+    /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// // e f
+    /// ```
+    ///
     /// # Panics
     /// * If `width * height != data.len()`
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
@@ -138,9 +150,9 @@ impl<T> Grid<T> {
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
-    /// grid.add_row(1, vec!['x', 'x']);
-    /// assert_eq!(grid, Grid::new(2, 3, vec!['a', 'b', 'x', 'x', 'c', 'd']));
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// grid.add_row(1, "xx".chars().collect());
+    /// assert_eq!(grid, Grid::new(2, 3, "abxxcd".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
     /// // a b
@@ -187,9 +199,9 @@ impl<T> Grid<T> {
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.remove_row(1);
-    /// assert_eq!(grid, Grid::new(2, 1, vec!['a', 'b']));
+    /// assert_eq!(grid, Grid::new(2, 1, "ab".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
     /// // a b
@@ -217,9 +229,9 @@ impl<T> Grid<T> {
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
-    /// grid.add_column(1, vec!['x', 'x']);
-    /// assert_eq!(grid, Grid::new(3, 2, vec!['a', 'x', 'b', 'c', 'x', 'd']));
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// grid.add_column(1, "xx".chars().collect());
+    /// assert_eq!(grid, Grid::new(3, 2, "axbcxd".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
     /// // a x b
@@ -265,9 +277,9 @@ impl<T> Grid<T> {
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let mut grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.remove_column(1);
-    /// assert_eq!(grid, Grid::new(1, 2, vec!['a', 'c']));
+    /// assert_eq!(grid, Grid::new(1, 2, "ac".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
     /// // a
@@ -330,14 +342,14 @@ where
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
     /// println!("{}", grid);
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// let cw = grid.rotate_cw();
-    /// assert_eq!(cw, Grid::new(2, 2, vec!['c', 'a', 'd', 'b']));
+    /// assert_eq!(cw, Grid::new(2, 2, "cadb".chars().collect()));
     /// println!("{}", cw);
     /// // prints:
     /// // c a
@@ -359,14 +371,14 @@ where
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
     /// println!("{}", grid);
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// let ccw = grid.rotate_ccw();
-    /// assert_eq!(ccw, Grid::new(2, 2, vec!['b', 'd', 'a', 'c']));
+    /// assert_eq!(ccw, Grid::new(2, 2, "bdac".chars().collect()));
     /// println!("{}", ccw);
     /// // prints:
     /// // b d
@@ -388,14 +400,14 @@ where
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
     /// println!("{}", grid);
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// let hori = grid.flip_horizontally();
-    /// assert_eq!(hori, Grid::new(2, 2, vec!['b', 'a', 'd', 'c']));
+    /// assert_eq!(hori, Grid::new(2, 2, "badc".chars().collect()));
     /// println!("{}", hori);
     /// // prints:
     /// // b a
@@ -417,14 +429,14 @@ where
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, vec!['a', 'b', 'c', 'd']);
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
     /// println!("{}", grid);
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// let vert = grid.flip_vertically();
-    /// assert_eq!(vert, Grid::new(2, 2, vec!['c', 'd', 'a', 'b']));
+    /// assert_eq!(vert, Grid::new(2, 2, "cdab".chars().collect()));
     /// println!("{}", vert);
     /// // prints:
     /// // c d
@@ -440,6 +452,37 @@ where
         }
 
         Self::new(self.width(), self.height(), flipped_data)
+    }
+
+    /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x)
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// // e f
+    ///
+    /// let transposed = grid.transpose();
+    /// assert_eq!(transposed, Grid::new(3, 2, "acebdf".chars().collect()));
+    /// println!("{}", transposed);
+    /// // prints:
+    /// // a c e
+    /// // b d f
+    /// ```
+    pub fn transpose(&self) -> Self {
+        let mut transposed_data = Vec::with_capacity(self.area());
+
+        for column in 0..self.width() {
+            for row in 0..self.height() {
+                transposed_data.push(self[(column, row)].clone());
+            }
+        }
+
+        Self::new(self.height(), self.width(), transposed_data)
     }
 }
 
@@ -518,6 +561,7 @@ where
     }
 }
 
+/// A struct used for indexing into a grid
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GridIndex {
     row: usize,
@@ -529,10 +573,12 @@ impl GridIndex {
         Self { row, column }
     }
 
+    /// Get the row index
     pub fn row(&self) -> usize {
         self.row
     }
 
+    // Get the column index
     pub fn column(&self) -> usize {
         self.column
     }
@@ -701,29 +747,11 @@ mod tests {
         grid
     }
 
-    fn example_grid_string() -> Grid<String> {
-        //    a    aa    aa    aa     a
-        // aaaa    aa aaaaa    aa     a
-        let grid = Grid::new(
-            5,
-            2,
-            vec!["a", "aa", "aa", "aa", "a", "aaaa", "aa", "aaaaa", "aa", "a"]
-                .into_iter()
-                .map(|s| s.to_owned())
-                .collect(),
-        );
-
-        println!("Grid<String>: ");
-        println!("{}", grid);
-
-        grid
-    }
-
     fn small_example_grid() -> Grid<char> {
         // a b
         // c d
         // e f
-        let grid = Grid::new(2, 3, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+        let grid = Grid::new(2, 3, "abcdef".chars().collect());
 
         println!("Grid<char>: ");
         println!("{}", grid);
@@ -792,14 +820,14 @@ mod tests {
 
     #[test]
     fn remove_row_test() {
-        let mut grid = example_grid_string();
-        let items_in_row_1: Vec<_> = grid.row_iter(1).cloned().collect();
+        let mut grid = small_example_grid();
+        let items_in_row_1: Vec<char> = grid.row_iter(1).cloned().collect();
 
-        assert_eq!(items_in_row_1, vec!["aaaa", "aa", "aaaaa", "aa", "a"]);
-        assert_eq!(grid.height(), 2);
+        assert_eq!(items_in_row_1, vec!['c', 'd']);
+        assert_eq!(grid.height(), 3);
 
         grid.remove_row(1);
-        assert_eq!(grid.height(), 1);
+        assert_eq!(grid.height(), 2);
     }
 
     #[test]
@@ -843,16 +871,14 @@ mod tests {
 
     #[test]
     fn remove_column_test() {
-        let mut grid = example_grid_string();
+        let mut grid = small_example_grid();
         let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
 
-        assert_eq!(items_in_column_1, vec!["aa", "aa"]);
-        assert_eq!(grid.width(), 5);
+        assert_eq!(items_in_column_1, vec!['b', 'd', 'f']);
+        assert_eq!(grid.width(), 2);
 
         grid.remove_column(1);
-        let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
-        assert_eq!(items_in_column_1, vec!["aa", "aaaaa"]);
-        assert_eq!(grid.width(), 4);
+        assert_eq!(grid.width(), 1);
     }
 
     #[test]
