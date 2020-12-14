@@ -3,6 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+/// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct Grid<T> {
     width: usize,
@@ -102,8 +103,11 @@ impl<T> Grid<T> {
         Some(&mut self.data[index])
     }
 
-    pub fn cell_iter<'a>(&'a self) -> CellIter<'a, T> {
-        CellIter::new(0, self)
+    /// Return an iterator over the cells in the grid.
+    ///
+    /// Goes from left->right, top->bottom.
+    pub fn cell_iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &T> {
+        self.data.iter()
     }
 
     /// Return an iterator over the columns in `row`
@@ -118,9 +122,10 @@ impl<T> Grid<T> {
     /// let items_in_row_2: Vec<u32> = grid.row_iter(2).cloned().collect();
     /// assert_eq!(items_in_row_2, vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30]);
     /// ```
-    pub fn row_iter<'a>(&'a self, row: usize) -> RowIter<'a, T> {
+    pub fn row_iter(&self, row: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.panic_if_row_out_of_bounds(row);
-        RowIter::new(row, 0, self)
+
+        (0..self.width()).map(move |column| &self[(column, row)])
     }
 
     /// Return an iterator over the rows in `column`
@@ -135,12 +140,12 @@ impl<T> Grid<T> {
     /// let items_in_column_2: Vec<u32> = grid.column_iter(2).cloned().collect();
     /// assert_eq!(items_in_column_2, vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]);
     /// ```
-    pub fn column_iter<'a>(&'a self, column: usize) -> ColIter<'a, T> {
+    pub fn column_iter<'a>(&'a self, column: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.panic_if_column_out_of_bounds(column);
-        ColIter::new(column, 0, self)
+        (0..self.height()).map(move |row| &self[(column, row)])
     }
 
-    /// Add a row at index `row`, moving all other rows backwards (row n becomes row n+1 and so on)
+    /// Insert a row at index `row`, shifting all other rows downward (row `n` becomes row `n+1` and so on).
     ///
     /// # Panics
     /// * If `row_contents.is_empty()`
@@ -151,7 +156,7 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// grid.add_row(1, "xx".chars().collect());
+    /// grid.insert_row(1, "xx".chars().collect());
     /// assert_eq!(grid, Grid::new(2, 3, "abxxcd".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
@@ -159,7 +164,7 @@ impl<T> Grid<T> {
     /// // x x
     /// // c d
     /// ```
-    pub fn add_row(&mut self, row: usize, row_contents: Vec<T>) {
+    pub fn insert_row(&mut self, row: usize, row_contents: Vec<T>) {
         if row_contents.is_empty() {
             panic!("row can't be empty");
         }
@@ -182,7 +187,7 @@ impl<T> Grid<T> {
 
         self.panic_if_row_out_of_bounds(row);
 
-        let start_idx = self.linear_idx(GridIndex::new(row, 0)).unwrap();
+        let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
@@ -209,7 +214,7 @@ impl<T> Grid<T> {
     pub fn remove_row(&mut self, row: usize) {
         self.panic_if_row_out_of_bounds(row);
 
-        let start_idx = self.linear_idx(GridIndex::new(row, 0)).unwrap();
+        let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
         self.data.drain(start_idx..start_idx + self.width());
         self.set_height(self.height() - 1);
@@ -219,7 +224,7 @@ impl<T> Grid<T> {
         }
     }
 
-    /// Add a column at index `column`, moving all other columns backwards (column n becomes column n+1 and so on)
+    /// Insert a column at index `column`, shifting all other columns to the right (column `n` becomes column `n+1` and so on).
     ///
     /// # Panics
     /// * If `column_contents.is_empty()`
@@ -230,14 +235,14 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// grid.add_column(1, "xx".chars().collect());
+    /// grid.insert_column(1, "xx".chars().collect());
     /// assert_eq!(grid, Grid::new(3, 2, "axbcxd".chars().collect()));
     /// println!("{}", grid);
     /// // prints:
     /// // a x b
     /// // c x d
     /// ```
-    pub fn add_column(&mut self, column: usize, column_contents: Vec<T>) {
+    pub fn insert_column(&mut self, column: usize, column_contents: Vec<T>) {
         if column_contents.is_empty() {
             panic!("column can't be empty");
         }
@@ -259,7 +264,7 @@ impl<T> Grid<T> {
         self.panic_if_column_out_of_bounds(column);
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| self.linear_idx(GridIndex::new(row, column)).unwrap())
+            .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
             .collect();
 
         for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()).rev() {
@@ -289,7 +294,7 @@ impl<T> Grid<T> {
         self.panic_if_column_out_of_bounds(column);
 
         let indices: Vec<usize> = (0..self.height())
-            .map(|row| self.linear_idx(GridIndex::new(row, column)).unwrap())
+            .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
             .collect();
 
         for idx in indices.into_iter().rev() {
@@ -497,6 +502,15 @@ where
     }
 }
 
+impl<T> Grid<T>
+where
+    T: PartialEq,
+{
+    pub fn contains(&self, value: &T) -> bool {
+        self.cell_iter().find(|&element| element == value).is_some()
+    }
+}
+
 impl<T> IntoIterator for Grid<T> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -540,7 +554,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // unwrap is safe here because we can't create a grid with length 0
-        let max_length = self.cell_iter().map(|c| c.to_string().len()).max().unwrap();
+        let max_length: usize = self.cell_iter().map(|c| c.to_string().len()).max().unwrap();
         let output = (0..self.height())
             .map(|r| {
                 (0..self.width())
@@ -561,146 +575,32 @@ where
     }
 }
 
-/// A struct used for indexing into a grid
+/// A struct used for indexing into a grid.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct GridIndex {
-    row: usize,
     column: usize,
+    row: usize,
 }
 
 impl GridIndex {
-    pub fn new(row: usize, column: usize) -> Self {
-        Self { row, column }
+    pub fn new(column: usize, row: usize) -> Self {
+        Self { column, row }
     }
 
-    /// Get the row index
-    pub fn row(&self) -> usize {
-        self.row
-    }
-
-    // Get the column index
+    // Get the column (x) index.
     pub fn column(&self) -> usize {
         self.column
+    }
+
+    /// Get the row (y) index.
+    pub fn row(&self) -> usize {
+        self.row
     }
 }
 
 impl From<(usize, usize)> for GridIndex {
-    fn from((col, row): (usize, usize)) -> Self {
-        GridIndex::new(row, col)
-    }
-}
-
-pub struct CellIter<'a, T> {
-    current: usize,
-    grid: &'a Grid<T>,
-}
-
-impl<'a, T> CellIter<'a, T> {
-    fn new(current: usize, grid: &'a Grid<T>) -> Self {
-        Self { current, grid }
-    }
-}
-
-impl<'a, T> Iterator for CellIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let current = self.current;
-        if current >= self.grid.data.len() {
-            None
-        } else {
-            self.current = current + 1;
-            let item = &self.grid.data[current];
-            Some(item)
-        }
-    }
-}
-
-pub struct RowIter<'a, T> {
-    row: usize,
-    current_col: usize,
-    grid: &'a Grid<T>,
-}
-
-impl<'a, T> RowIter<'a, T> {
-    fn new(row: usize, current_col: usize, grid: &'a Grid<T>) -> Self {
-        Self {
-            row,
-            current_col,
-            grid,
-        }
-    }
-}
-
-impl<'a, T> Iterator for RowIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let current_col = self.current_col;
-        if current_col == self.grid.width() {
-            None
-        } else {
-            self.current_col = current_col + 1;
-            let item = &self.grid[(current_col, self.row)];
-            Some(item)
-        }
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for RowIter<'a, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let current_col = self.current_col;
-        if current_col == 0 {
-            None
-        } else {
-            self.current_col = current_col - 1;
-            let item = &self.grid[(current_col, self.row)];
-            Some(item)
-        }
-    }
-}
-
-pub struct ColIter<'a, T> {
-    col: usize,
-    current_row: usize,
-    grid: &'a Grid<T>,
-}
-
-impl<'a, T> ColIter<'a, T> {
-    fn new(col: usize, current_row: usize, grid: &'a Grid<T>) -> Self {
-        Self {
-            col,
-            current_row,
-            grid,
-        }
-    }
-}
-
-impl<'a, T> Iterator for ColIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let current_row = self.current_row;
-        if current_row == self.grid.height() {
-            None
-        } else {
-            self.current_row = current_row + 1;
-            let item = &self.grid[(self.col, current_row)];
-            Some(item)
-        }
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for ColIter<'a, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let current_row = self.current_row;
-        if current_row == 0 {
-            None
-        } else {
-            self.current_row = current_row - 1;
-            let item = &self.grid[(self.col, current_row)];
-            Some(item)
-        }
+    fn from((column, row): (usize, usize)) -> Self {
+        GridIndex::new(column, row)
     }
 }
 
@@ -775,6 +675,19 @@ mod tests {
     }
 
     #[test]
+    fn set_value_test() {
+        let mut grid = small_example_grid();
+
+        *grid.get_mut((0, 1)).unwrap() = 'x';
+
+        assert_eq!(grid, Grid::new(2, 3, "abxdef".chars().collect()));
+
+        grid[(0, 2)] = 'y';
+
+        assert_eq!(grid, Grid::new(2, 3, "abxdyf".chars().collect()));
+    }
+
+    #[test]
     fn row_iter_test() {
         let grid = example_grid_u32();
 
@@ -783,6 +696,13 @@ mod tests {
         assert_eq!(
             actual_items_in_row,
             vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        );
+
+        let actual_items_in_row_rev: Vec<u32> = grid.row_iter(2).rev().copied().collect();
+
+        assert_eq!(
+            actual_items_in_row_rev,
+            vec![30, 29, 28, 27, 26, 25, 24, 23, 22, 21]
         );
     }
 
@@ -806,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    fn add_row_test() {
+    fn insert_row_test() {
         let mut grid = example_grid_u32();
 
         let items_in_row_1: Vec<u32> = grid.row_iter(1).copied().collect();
@@ -814,7 +734,7 @@ mod tests {
         assert_eq!(items_in_row_1, vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
         assert_eq!(grid.height(), 10);
 
-        grid.add_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+        grid.insert_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
         assert_eq!(grid.height(), 11);
     }
 
@@ -844,13 +764,13 @@ mod tests {
         assert!(grid.is_empty());
 
         // since the grid is now empty, we can add a row of any non-zero length
-        grid.add_row(0, vec!['a', 'b', 'c']);
+        grid.insert_row(0, vec!['a', 'b', 'c']);
 
         assert_eq!(grid, Grid::new(3, 1, vec!['a', 'b', 'c']));
     }
 
     #[test]
-    fn add_column_test() {
+    fn insert_column_test() {
         let mut grid = example_grid_u32();
 
         let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
@@ -861,7 +781,7 @@ mod tests {
         );
         assert_eq!(grid.width(), 10);
 
-        grid.add_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
+        grid.insert_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
 
         let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
 
@@ -894,7 +814,7 @@ mod tests {
         assert!(grid.is_empty());
 
         // since the grid is now empty, we can add a column of any non-zero length
-        grid.add_column(0, vec!['a', 'b', 'c']);
+        grid.insert_column(0, vec!['a', 'b', 'c']);
 
         assert_eq!(grid, Grid::new(1, 3, vec!['a', 'b', 'c']));
     }
@@ -933,5 +853,26 @@ mod tests {
         let flipped = grid.flip_vertically();
 
         assert_eq!(flipped, Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
+    }
+
+    #[test]
+    fn transpose_test() {
+        let grid = small_example_grid();
+
+        let transposed = grid.transpose();
+
+        assert_eq!(transposed, Grid::new(3, 2, "acebdf".chars().collect()));
+
+        let transposed_again = transposed.transpose();
+
+        assert_eq!(grid, transposed_again);
+    }
+
+    #[test]
+    fn contains_test() {
+        let grid = small_example_grid();
+
+        assert!(grid.contains(&'a'));
+        assert!(!grid.contains(&'g'));
     }
 }
