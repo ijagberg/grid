@@ -564,16 +564,18 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // unwrap is safe here because we can't create a grid with length 0
         let max_length: usize = self.cell_iter().map(|c| c.to_string().len()).max().unwrap();
+        let padded_string = |orig: &str| {
+            let mut padding: String = std::iter::repeat(" ")
+                .take(max_length - orig.len())
+                .collect();
+            padding.push_str(orig);
+            padding
+        };
+
         let output = (0..self.height())
             .map(|r| {
                 (0..self.width())
-                    .map(|c| {
-                        let elem = &self[(c, r)].to_string();
-                        let padding = std::iter::repeat(" ".to_string())
-                            .take(max_length - elem.len())
-                            .collect::<String>();
-                        format!("{}{}", padding, self[(c, r)].to_string())
-                    })
+                    .map(|c| padded_string(&self[(c, r)].to_string()))
                     .collect::<Vec<String>>()
                     .join(" ")
             })
