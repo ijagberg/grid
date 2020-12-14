@@ -12,7 +12,7 @@ pub struct Grid<T> {
 }
 
 impl<T> Grid<T> {
-    /// Construct a new Grid
+    /// Construct a new Grid.
     ///
     /// # Example
     /// ```
@@ -64,24 +64,24 @@ impl<T> Grid<T> {
         ans
     }
 
-    /// Returns the width (number of columns) of the grid
+    /// Returns the width (number of columns) of the grid.
     pub fn width(&self) -> usize {
         self.width
     }
 
-    /// Returns the height (number of rows) of the grid
+    /// Returns the height (number of rows) of the grid.
     pub fn height(&self) -> usize {
         self.height
     }
 
-    /// Returns the area (number of columns * number of rows) of the grid
+    /// Returns the area (number of columns * number of rows) of the grid.
     pub fn area(&self) -> usize {
         self.width() * self.height()
     }
 
-    /// Attempts to get a reference to the element at `idx`
+    /// Attempts to get a reference to the element at `idx`.
     ///
-    /// Returns `None` if `idx` is out of bounds
+    /// Returns `None` if `idx` is out of bounds.
     pub fn get<I>(&self, idx: I) -> Option<&T>
     where
         GridIndex: From<I>,
@@ -110,7 +110,7 @@ impl<T> Grid<T> {
         self.data.iter()
     }
 
-    /// Return an iterator over the columns in `row`
+    /// Return an iterator over the columns in the row with index `row`.
     ///
     /// # Panics
     /// * If `row >= self.height()`
@@ -128,7 +128,7 @@ impl<T> Grid<T> {
         (0..self.width()).map(move |column| &self[(column, row)])
     }
 
-    /// Return an iterator over the rows in `column`
+    /// Return an iterator over the rows in the column with index `column`.
     ///
     /// # Panics
     /// * If `column >= self.width()`
@@ -343,7 +343,7 @@ impl<T> Grid<T>
 where
     T: Clone,
 {
-    /// Rotate the grid clockwise 90 degrees, cloning the data into a new grid
+    /// Rotate the grid clockwise 90 degrees, cloning the data into a new grid.
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
@@ -372,7 +372,7 @@ where
         Self::new(self.height(), self.width(), rotated_data)
     }
 
-    /// Rotate the grid counter-clockwise 90 degrees, cloning the data into a new grid
+    /// Rotate the grid counter-clockwise 90 degrees, cloning the data into a new grid.
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
@@ -401,7 +401,7 @@ where
         Self::new(self.height(), self.width(), rotated_data)
     }
 
-    /// Flip the grid horizontally, so that the first column becomes the last
+    /// Flip the grid horizontally, so that the first column becomes the last.
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
@@ -430,7 +430,7 @@ where
         Self::new(self.width(), self.height(), flipped_data)
     }
 
-    /// Flip the grid vertically, so that the first row becomes the last
+    /// Flip the grid vertically, so that the first row becomes the last.
     /// # Example
     /// ```
     /// # use simple_grid::Grid;
@@ -459,7 +459,7 @@ where
         Self::new(self.width(), self.height(), flipped_data)
     }
 
-    /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x)
+    /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x).
     ///
     /// # Example
     /// ```
@@ -495,7 +495,7 @@ impl<T> Grid<T>
 where
     T: Default,
 {
-    /// Create a grid filled with default values
+    /// Create a grid filled with default values.
     pub fn new_default(width: usize, height: usize) -> Grid<T> {
         let data = (0..width * height).map(|_| T::default()).collect();
         Self::new(width, height, data)
@@ -506,6 +506,15 @@ impl<T> Grid<T>
 where
     T: PartialEq,
 {
+    /// Returns `true` if the grid contains some element equal to `value`.
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert!(grid.contains(&'a'));
+    /// assert!(!grid.contains(&'e'));
+    /// ```
     pub fn contains(&self, value: &T) -> bool {
         self.cell_iter().find(|&element| element == value).is_some()
     }
@@ -577,24 +586,22 @@ where
 
 /// A struct used for indexing into a grid.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct GridIndex {
-    column: usize,
-    row: usize,
-}
+pub struct GridIndex(usize, usize);
 
 impl GridIndex {
+    /// Construct a new GridIndex.
     pub fn new(column: usize, row: usize) -> Self {
-        Self { column, row }
+        Self(column, row)
     }
 
     // Get the column (x) index.
     pub fn column(&self) -> usize {
-        self.column
+        self.0
     }
 
     /// Get the row (y) index.
     pub fn row(&self) -> usize {
-        self.row
+        self.1
     }
 }
 
@@ -605,7 +612,7 @@ impl From<(usize, usize)> for GridIndex {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum LinearIndexError {
+enum LinearIndexError {
     RowTooHigh,
     ColumnTooHigh,
 }
