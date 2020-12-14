@@ -596,7 +596,7 @@ impl GridIndex {
         Self(column, row)
     }
 
-    // Get the column (x) index.
+    /// Get the column (x) index.
     pub fn column(&self) -> usize {
         self.0
     }
