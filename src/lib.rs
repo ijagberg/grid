@@ -165,9 +165,7 @@ impl<T> Grid<T> {
     /// // c d
     /// ```
     pub fn insert_row(&mut self, row: usize, row_contents: Vec<T>) {
-        if row_contents.is_empty() {
-            panic!("row can't be empty");
-        }
+        Self::panic_if_row_is_empty(&row_contents);
 
         if self.is_empty() && row == 0 {
             // special case, add a row regardless of bounds and set width
@@ -177,14 +175,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        if row_contents.len() != self.width() {
-            panic!(
-                "invalid length of row: was {}, should be {}",
-                row_contents.len(),
-                self.width()
-            );
-        }
-
+        self.panic_if_row_length_is_not_equal_to_width(row_contents.len());
         self.panic_if_row_out_of_bounds(row);
 
         let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
@@ -196,7 +187,7 @@ impl<T> Grid<T> {
         self.set_height(self.height() + 1);
     }
 
-    /// Remove row at `row`, shifting all rows with higher indices "upward" (row 4 becomes row 3 etc.)
+    /// Remove row at `row`, shifting all rows with higher indices "upward" (row `n` becomes row `n-1`).
     ///
     /// # Panics
     /// * If `row >= self.height()`
@@ -220,6 +211,7 @@ impl<T> Grid<T> {
         self.set_height(self.height() - 1);
 
         if self.height() == 0 {
+            //  no rows remain, so the grid is empty
             self.set_width(0);
         }
     }
@@ -243,9 +235,7 @@ impl<T> Grid<T> {
     /// // c x d
     /// ```
     pub fn insert_column(&mut self, column: usize, column_contents: Vec<T>) {
-        if column_contents.is_empty() {
-            panic!("column can't be empty");
-        }
+        Self::panic_if_column_is_empty(&column_contents);
 
         if self.is_empty() && column == 0 {
             self.set_height(column_contents.len());
@@ -253,14 +243,8 @@ impl<T> Grid<T> {
             self.data = column_contents;
             return;
         }
-        if column_contents.len() != self.height() {
-            panic!(
-                "invalid length of column: was {}, should be {}",
-                column_contents.len(),
-                self.height()
-            );
-        }
 
+        self.panic_if_column_length_is_not_equal_to_height(column_contents.len());
         self.panic_if_column_out_of_bounds(column);
 
         let indices: Vec<usize> = (0..column_contents.len())
@@ -274,7 +258,7 @@ impl<T> Grid<T> {
         self.set_width(self.width() + 1);
     }
 
-    /// Remove column at `column`, shifting all columns with higher indices "left" (column 4 becomes column 3 etc.)
+    /// Remove column at `column`, shifting all columns with higher indices "left" (column `n` becomes column `n-1`).
     ///
     /// # Panics
     /// * If `column >= self.width()`
@@ -304,6 +288,7 @@ impl<T> Grid<T> {
         self.set_width(self.width() - 1);
 
         if self.width() == 0 {
+            //  no columns remain, so the grid is empty
             self.set_height(0);
         }
     }
@@ -315,6 +300,18 @@ impl<T> Grid<T> {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
             Ok(idx.row() * self.width() + idx.column())
+        }
+    }
+
+    fn panic_if_row_is_empty(row: &[T]) {
+        if row.is_empty() {
+            panic!("row can't be empty");
+        }
+    }
+
+    fn panic_if_column_is_empty(column: &[T]) {
+        if column.is_empty() {
+            panic!("column can't be empty");
         }
     }
 
@@ -334,6 +331,26 @@ impl<T> Grid<T> {
                 "column index out of bounds: the width is {} but the column index is {}",
                 self.width(),
                 column
+            );
+        }
+    }
+
+    fn panic_if_column_length_is_not_equal_to_height(&self, column_length: usize) {
+        if column_length != self.height() {
+            panic!(
+                "invalid length of column: was {}, should be {}",
+                column_length,
+                self.height()
+            );
+        }
+    }
+
+    fn panic_if_row_length_is_not_equal_to_width(&self, row_length: usize) {
+        if row_length != self.width() {
+            panic!(
+                "invalid length of row: was {}, should be {}",
+                row_length,
+                self.width()
             );
         }
     }
@@ -562,26 +579,26 @@ where
     T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // unwrap is safe here because we can't create a grid with length 0
-        let max_length: usize = self.cell_iter().map(|c| c.to_string().len()).max().unwrap();
-        let padded_string = |orig: &str| {
-            let mut padding: String = std::iter::repeat(" ")
-                .take(max_length - orig.len())
-                .collect();
-            padding.push_str(orig);
-            padding
+        let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
+            let padded_string = |orig: &str| {
+                let mut padding: String = std::iter::repeat(" ")
+                    .take(max_length - orig.len())
+                    .collect();
+                padding.push_str(orig);
+                padding
+            };
+            (0..self.height())
+                .map(|r| {
+                    (0..self.width())
+                        .map(|c| padded_string(&self[(c, r)].to_string()))
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        } else {
+            "".to_string()
         };
-
-        let output = (0..self.height())
-            .map(|r| {
-                (0..self.width())
-                    .map(|c| padded_string(&self[(c, r)].to_string()))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-
         write!(f, "{}", output)
     }
 }
@@ -883,5 +900,26 @@ mod tests {
 
         assert!(grid.contains(&'a'));
         assert!(!grid.contains(&'g'));
+    }
+
+    #[test]
+    fn is_empty_test() {
+        let mut grid = small_example_grid();
+
+        assert!(!grid.is_empty());
+
+        grid.remove_row(0);
+        assert!(!grid.is_empty());
+
+        grid.remove_row(0);
+        assert!(!grid.is_empty());
+
+        grid.remove_row(0);
+        assert!(grid.is_empty());
+
+        grid.insert_row(0, vec!['g', 'h', 'i', 'j', 'k']);
+
+        assert!(!grid.is_empty());
+        assert_eq!(grid.width(), 5);
     }
 }
