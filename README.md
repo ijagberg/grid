@@ -3,6 +3,7 @@
 I noticed I kept reimplementing the same 2d-grid structure in many of my personal projects, so I decided to make it into a library. This data structure does not attempt to be the fastest or best implementation of a 2d-grid, but it's simple to use and has zero dependencies.
 
 # Example usage
+## Creating a grid and accessing its cells:
 ```
 use simple_grid::Grid;
 
@@ -21,4 +22,34 @@ println!("{}", grid);
 // 71  72  73  74  75  76  77  78  79  80
 // 81  82  83  84  85  86  87  88  89  90
 // 91  92  93  94  95  96  97  98  99 100
+```
+
+## Iterating over cells:
+```
+let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
+
+let elements_in_row_3: Vec<u32> = grid.row_iter(3).copied().collect();
+assert_eq!(
+    elements_in_row_3,
+    vec![31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+);
+
+let elements_in_column_7: Vec<u32> = grid.column_iter(7).copied().collect();
+assert_eq!(
+    elements_in_column_7,
+    vec![8, 18, 28, 38, 48, 58, 68, 78, 88, 98]
+);
+```
+
+## Modifying contents
+```
+let mut grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
+
+// get a mutable reference to a cell
+*grid.get_mut((8, 2)).unwrap() = 1000;
+assert_eq!(grid.get((8, 2)).unwrap(), &1000);
+
+// can also access directly via the index operator
+grid[(5,5)] = 1001;
+assert_eq!(grid.get((5, 5)).unwrap(), &1001);
 ```
