@@ -106,7 +106,7 @@ impl<T> Grid<T> {
     /// Return an iterator over the cells in the grid.
     ///
     /// Goes from left->right, top->bottom.
-    pub fn cell_iter<'a>(&'a self) -> impl DoubleEndedIterator<Item = &T> {
+    pub fn cell_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.data.iter()
     }
 
@@ -140,7 +140,7 @@ impl<T> Grid<T> {
     /// let items_in_column_2: Vec<u32> = grid.column_iter(2).cloned().collect();
     /// assert_eq!(items_in_column_2, vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]);
     /// ```
-    pub fn column_iter<'a>(&'a self, column: usize) -> impl DoubleEndedIterator<Item = &T> {
+    pub fn column_iter(&self, column: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.panic_if_column_out_of_bounds(column);
         (0..self.height()).map(move |row| &self[(column, row)])
     }
@@ -168,7 +168,7 @@ impl<T> Grid<T> {
         Self::panic_if_row_is_empty(&row_contents);
 
         if self.is_empty() && row == 0 {
-            // special case, add a row regardless of bounds and set width
+            // special case, if the grid is empty, we can insert a row of any width
             self.set_width(row_contents.len());
             self.set_height(1);
             self.data = row_contents;
@@ -238,6 +238,7 @@ impl<T> Grid<T> {
         Self::panic_if_column_is_empty(&column_contents);
 
         if self.is_empty() && column == 0 {
+            // special case, if the grid is empty, we can insert a column of any height
             self.set_height(column_contents.len());
             self.set_width(1);
             self.data = column_contents;
@@ -533,7 +534,7 @@ where
     /// assert!(!grid.contains(&'e'));
     /// ```
     pub fn contains(&self, value: &T) -> bool {
-        self.cell_iter().find(|&element| element == value).is_some()
+        self.cell_iter().any(|element| element == value)
     }
 }
 
