@@ -600,7 +600,7 @@ where
 }
 
 /// A struct used for indexing into a grid.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct GridIndex(usize, usize);
 
 impl GridIndex {
