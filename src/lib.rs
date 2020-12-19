@@ -1,13 +1,19 @@
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct Grid<T> {
+    /// The width of the grid (number of columns).
     width: usize,
+    /// The height of the grid (number of rows).
     height: usize,
+    /// The data of the grid, stored in a linear array of `width * height` length.
     data: Vec<T>,
 }
 
 impl<T> Grid<T> {
     /// Construct a new Grid.
+    ///
+    /// # Panics
+    /// * If `width * height != data.len()`
     ///
     /// # Example
     /// ```
@@ -20,9 +26,6 @@ impl<T> Grid<T> {
     /// // c d
     /// // e f
     /// ```
-    ///
-    /// # Panics
-    /// * If `width * height != data.len()`
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
         if width * height != data.len() {
             panic!(
@@ -623,6 +626,12 @@ impl GridIndex {
 impl From<(usize, usize)> for GridIndex {
     fn from((column, row): (usize, usize)) -> Self {
         GridIndex::new(column, row)
+    }
+}
+
+impl std::fmt::Display for GridIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{})", self.column(), self.row())
     }
 }
 
