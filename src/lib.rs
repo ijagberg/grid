@@ -1,8 +1,3 @@
-use std::{
-    fmt::Display,
-    ops::{Index, IndexMut},
-};
-
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct Grid<T> {
@@ -547,7 +542,7 @@ impl<T> IntoIterator for Grid<T> {
     }
 }
 
-impl<T, I> Index<I> for Grid<T>
+impl<T, I> std::ops::Index<I> for Grid<T>
 where
     GridIndex: From<I>,
 {
@@ -562,7 +557,7 @@ where
     }
 }
 
-impl<T, I> IndexMut<I> for Grid<T>
+impl<T, I> std::ops::IndexMut<I> for Grid<T>
 where
     GridIndex: From<I>,
 {
@@ -575,9 +570,9 @@ where
     }
 }
 
-impl<T> Display for Grid<T>
+impl<T> std::fmt::Display for Grid<T>
 where
-    T: Display,
+    T: std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
@@ -637,7 +632,7 @@ enum LinearIndexError {
     ColumnTooHigh,
 }
 
-impl Display for LinearIndexError {
+impl std::fmt::Display for LinearIndexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match self {
             LinearIndexError::RowTooHigh => "row index is too high",
