@@ -53,3 +53,6 @@ assert_eq!(grid.get((8, 2)).unwrap(), &1000);
 grid[(5,5)] = 1001;
 assert_eq!(grid.get((5, 5)).unwrap(), &1001);
 ```
+
+## Serializing/deserializing
+This is only available if the `serde` feature is enabled.

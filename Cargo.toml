@@ -1,7 +1,7 @@
 [package]
 name = "simple-grid"
 description = "A simple 2d-grid structure"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Isak Jägberg <ijagberg@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -10,5 +10,8 @@ categories = ["data-structures"]
 repository = "https://github.com/ijagberg/grid"
 homepage = "https://github.com/ijagberg/grid"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+serde = { version = "1.0.118", features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = "1.0.60"

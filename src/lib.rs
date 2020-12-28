@@ -1,5 +1,6 @@
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Grid<T> {
     /// The width of the grid (number of columns).
     width: usize,
@@ -926,5 +927,15 @@ mod tests {
 
         assert!(!grid.is_empty());
         assert_eq!(grid.width(), 5);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn serialize_test() {
+        let mut grid = small_example_grid();
+
+        let json = serde_json::to_string(&grid).unwrap();
+
+        println!("{}", json);
     }
 }
