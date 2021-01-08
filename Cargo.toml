@@ -1,7 +1,7 @@
 [package]
 name = "simple-grid"
 description = "A simple 2d-grid structure"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Isak Jägberg <ijagberg@gmail.com>"]
 edition = "2018"
 license = "MIT"
