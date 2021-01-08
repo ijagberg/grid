@@ -175,9 +175,18 @@ impl<T> Grid<T> {
         }
 
         self.panic_if_row_length_is_not_equal_to_width(row_contents.len());
-        self.panic_if_row_out_of_bounds(row);
 
-        let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
+        if row > self.height() {
+            // for example, if the height of the grid is 1,
+            // we still want to support adding a column at the bottom
+            panic!(
+                "row insertion index (is {}) should be <= height (is {})",
+                row,
+                self.height()
+            );
+        }
+
+        let start_idx = Self::linear_idx_in(self.width(), GridIndex::new(0, row));
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
@@ -245,13 +254,22 @@ impl<T> Grid<T> {
         }
 
         self.panic_if_column_length_is_not_equal_to_height(column_contents.len());
-        self.panic_if_column_out_of_bounds(column);
+
+        if column > self.width() {
+            // for example, if the width of the grid is 1,
+            // we still want to support adding a column at the furthest right
+            panic!(
+                "column insertion index (is {}) should be <= width (is {})",
+                column,
+                self.width()
+            );
+        }
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
+            .map(|row| Self::linear_idx_in(self.width() + 1, GridIndex::new(column, row)))
             .collect();
 
-        for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()).rev() {
+        for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()) {
             self.data.insert(idx, elem);
         }
 
@@ -299,8 +317,12 @@ impl<T> Grid<T> {
         } else if idx.column() >= self.width() {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Ok(idx.row() * self.width() + idx.column())
+            Ok(Self::linear_idx_in(self.width(), idx))
         }
+    }
+
+    fn linear_idx_in(width: usize, idx: GridIndex) -> usize {
+        idx.row() * width + idx.column()
     }
 
     fn panic_if_row_is_empty(row: &[T]) {
@@ -679,10 +701,12 @@ mod tests {
         grid
     }
 
+    /// a b
+    ///
+    /// c d
+    ///
+    /// e f
     fn small_example_grid() -> Grid<char> {
-        // a b
-        // c d
-        // e f
         let grid = Grid::new(2, 3, "abcdef".chars().collect());
 
         println!("Grid<char>: ");
@@ -758,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_row_test() {
+    fn insert_row_in_middle_test() {
         let mut grid = example_grid_u32();
 
         let items_in_row_1: Vec<u32> = grid.row_iter(1).copied().collect();
@@ -768,6 +792,23 @@ mod tests {
 
         grid.insert_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
         assert_eq!(grid.height(), 11);
+    }
+
+    #[test]
+    fn insert_row_at_end_test() {
+        let mut grid = small_example_grid();
+        let new_row: Vec<char> = "xx".chars().collect();
+
+        grid.insert_row(3, new_row.clone());
+
+        let items_in_bottom_row: Vec<char> = grid.row_iter(3).copied().collect();
+
+        assert_eq!(items_in_bottom_row, new_row);
+
+        assert_eq!(
+            grid,
+            Grid::new(2, 4, "abcdefxx".chars().collect::<Vec<_>>())
+        );
     }
 
     #[test]
@@ -802,23 +843,36 @@ mod tests {
     }
 
     #[test]
-    fn insert_column_test() {
-        let mut grid = example_grid_u32();
+    fn insert_column_in_middle_test() {
+        let mut grid = small_example_grid();
 
-        let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
+        let items_in_column_1: Vec<char> = grid.column_iter(1).copied().collect();
+
+        assert_eq!(items_in_column_1, "bdf".chars().collect::<Vec<_>>());
+        assert_eq!(grid.width(), 2);
+
+        grid.insert_column(1, "xxx".chars().collect());
+
+        let items_in_column_1: Vec<char> = grid.column_iter(1).copied().collect();
+
+        assert_eq!(items_in_column_1, "xxx".chars().collect::<Vec<_>>());
+        assert_eq!(grid.width(), 3);
+    }
+
+    #[test]
+    fn insert_column_at_end_test() {
+        let mut grid = small_example_grid();
+        let new_column: Vec<char> = "xxx".chars().collect();
+        grid.insert_column(2, new_column.clone());
+
+        let items_in_column_2: Vec<char> = grid.column_iter(2).copied().collect();
+
+        assert_eq!(items_in_column_2, new_column);
 
         assert_eq!(
-            items_in_column_1,
-            vec![2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
+            grid,
+            Grid::new(3, 3, "abxcdxefx".chars().collect::<Vec<_>>())
         );
-        assert_eq!(grid.width(), 10);
-
-        grid.insert_column(1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
-
-        let items_in_column_1: Vec<u32> = grid.column_iter(1).copied().collect();
-
-        assert_eq!(items_in_column_1, vec![1, 2, 1, 2, 1, 2, 1, 2, 1, 2]);
-        assert_eq!(grid.width(), 11);
     }
 
     #[test]
