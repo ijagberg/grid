@@ -1,5 +1,5 @@
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
-#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Grid<T> {
     /// The width of the grid (number of columns).
