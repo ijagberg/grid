@@ -34,8 +34,8 @@ fn main() {
     // get a mutable reference to a cell
     *grid.get_mut((8, 2)).unwrap() = 1000;
     assert_eq!(grid.get((8, 2)).unwrap(), &1000);
-    
+
     // can also access directly via the index operator
-    grid[(5,5)] = 1001;
+    grid[(5, 5)] = 1001;
     assert_eq!(grid.get((5, 5)).unwrap(), &1001);
 }

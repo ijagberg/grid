@@ -1,3 +1,6 @@
+#[cfg(feature = "linalg")]
+pub mod linalg;
+
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -40,6 +43,17 @@ impl<T> Grid<T> {
             height,
             data,
         }
+    }
+
+    /// Checks if the Grid is square (number of columns and rows is equal).
+    ///
+    /// Note: an empty Grid is not square (even though columns and rows is 0).
+    pub fn is_square(&self) -> bool {
+        !self.is_empty() && self.width() == self.height()
+    }
+
+    pub fn has_same_dimensions(&self, other: &Grid<T>) -> bool {
+        self.width() == other.width() && self.height() == other.height()
     }
 
     fn data(&self) -> &Vec<T> {
@@ -186,7 +200,7 @@ impl<T> Grid<T> {
             );
         }
 
-        let start_idx = Self::linear_idx_in(self.width(), GridIndex::new(0, row));
+        let start_idx = GridIndex::linear_idx_in(self.width(), GridIndex::new(0, row));
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
@@ -266,7 +280,7 @@ impl<T> Grid<T> {
         }
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| Self::linear_idx_in(self.width() + 1, GridIndex::new(column, row)))
+            .map(|row| GridIndex::linear_idx_in(self.width() + 1, GridIndex::new(column, row)))
             .collect();
 
         for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()) {
@@ -317,12 +331,8 @@ impl<T> Grid<T> {
         } else if idx.column() >= self.width() {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Ok(Self::linear_idx_in(self.width(), idx))
+            Ok(GridIndex::linear_idx_in(self.width(), idx))
         }
-    }
-
-    fn linear_idx_in(width: usize, idx: GridIndex) -> usize {
-        idx.row() * width + idx.column()
     }
 
     fn panic_if_row_is_empty(row: &[T]) {
@@ -643,6 +653,10 @@ impl GridIndex {
     /// Get the row (y) index.
     pub fn row(&self) -> usize {
         self.1
+    }
+
+    pub(crate) fn linear_idx_in(width: usize, idx: GridIndex) -> usize {
+        idx.row() * width + idx.column()
     }
 }
 
