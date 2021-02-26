@@ -4,11 +4,12 @@ pub mod linalg;
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub struct Grid<T> {
     /// The width of the grid (number of columns).
-    width: usize,
+    pub width: usize,
     /// The height of the grid (number of rows).
-    height: usize,
+    pub height: usize,
     /// The data of the grid, stored in a linear array of `width * height` length.
     data: Vec<T>,
 }
@@ -49,11 +50,11 @@ impl<T> Grid<T> {
     ///
     /// Note: an empty Grid is not square (even though columns and rows is 0).
     pub fn is_square(&self) -> bool {
-        !self.is_empty() && self.width() == self.height()
+        !self.is_empty() && self.width == self.height
     }
 
     pub fn has_same_dimensions(&self, other: &Grid<T>) -> bool {
-        self.width() == other.width() && self.height() == other.height()
+        self.width == other.width && self.height == other.height
     }
 
     fn data(&self) -> &Vec<T> {
@@ -69,27 +70,17 @@ impl<T> Grid<T> {
     }
 
     fn is_empty(&self) -> bool {
-        let ans = self.width() == 0 || self.height() == 0;
+        let ans = self.width == 0 || self.height == 0;
         if ans {
-            debug_assert!(self.width() == 0);
-            debug_assert!(self.height() == 0);
+            debug_assert!(self.width == 0);
+            debug_assert!(self.height == 0);
         }
         ans
     }
 
-    /// Returns the width (number of columns) of the grid.
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    /// Returns the height (number of rows) of the grid.
-    pub fn height(&self) -> usize {
-        self.height
-    }
-
     /// Returns the area (number of columns * number of rows) of the grid.
     pub fn area(&self) -> usize {
-        self.width() * self.height()
+        self.width * self.height
     }
 
     /// Attempts to get a reference to the element at `idx`.
@@ -106,7 +97,7 @@ impl<T> Grid<T> {
 
     /// Attempts to get a mutable reference to the element at `idx`
     ///
-    /// Returns `None` if `idx` is out of bounds
+    /// Returns `None` if `idx` is out of bounds.
     pub fn get_mut<I>(&mut self, idx: I) -> Option<&mut T>
     where
         GridIndex: From<I>,
@@ -126,7 +117,7 @@ impl<T> Grid<T> {
     /// Return an iterator over the columns in the row with index `row`.
     ///
     /// # Panics
-    /// * If `row >= self.height()`
+    /// * If `row >= self.height`
     ///
     /// # Example
     /// ```
@@ -138,13 +129,13 @@ impl<T> Grid<T> {
     pub fn row_iter(&self, row: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.panic_if_row_out_of_bounds(row);
 
-        (0..self.width()).map(move |column| &self[(column, row)])
+        (0..self.width).map(move |column| &self[(column, row)])
     }
 
     /// Return an iterator over the rows in the column with index `column`.
     ///
     /// # Panics
-    /// * If `column >= self.width()`
+    /// * If `column >= self.width`
     ///
     /// # Example
     /// ```
@@ -155,15 +146,15 @@ impl<T> Grid<T> {
     /// ```
     pub fn column_iter(&self, column: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.panic_if_column_out_of_bounds(column);
-        (0..self.height()).map(move |row| &self[(column, row)])
+        (0..self.height).map(move |row| &self[(column, row)])
     }
 
     /// Insert a row at index `row`, shifting all other rows downward (row `n` becomes row `n+1` and so on).
     ///
     /// # Panics
     /// * If `row_contents.is_empty()`
-    /// * If `row_contents.len() != self.width()`
-    /// * If `row >= self.height()`
+    /// * If `row_contents.len() != self.width`
+    /// * If `row >= self.height`
     ///
     /// # Example
     /// ```
@@ -190,29 +181,56 @@ impl<T> Grid<T> {
 
         self.panic_if_row_length_is_not_equal_to_width(row_contents.len());
 
-        if row > self.height() {
+        if row > self.height {
             // for example, if the height of the grid is 1,
             // we still want to support adding a column at the bottom
             panic!(
                 "row insertion index (is {}) should be <= height (is {})",
-                row,
-                self.height()
+                row, self.height
             );
         }
 
-        let start_idx = GridIndex::linear_idx_in(self.width(), GridIndex::new(0, row));
+        let start_idx = GridIndex::linear_idx_in(self.width, GridIndex::new(0, row));
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
         }
 
-        self.set_height(self.height() + 1);
+        self.set_height(self.height + 1);
+    }
+
+    /// Replace the contents in a row.
+    ///
+    /// # Panics
+    /// * If `row >= self.height`
+    /// * If `data.len() != self.width`
+    pub fn replace_row(&mut self, row: usize, data: Vec<T>) {
+        self.panic_if_row_out_of_bounds(row);
+        self.panic_if_row_length_is_not_equal_to_width(data.len());
+
+        for (column, elem) in data.into_iter().enumerate() {
+            self[(column, row)] = elem;
+        }
+    }
+
+    /// Replace the contents in a column.
+    ///
+    /// # Panics
+    /// * If `column >= self.width`
+    /// * If `data.len() != self.height`
+    pub fn replace_column(&mut self, column: usize, data: Vec<T>) {
+        self.panic_if_column_out_of_bounds(column);
+        self.panic_if_column_length_is_not_equal_to_height(data.len());
+
+        for (row, elem) in data.into_iter().enumerate() {
+            self[(column, row)] = elem;
+        }
     }
 
     /// Remove row at `row`, shifting all rows with higher indices "upward" (row `n` becomes row `n-1`).
     ///
     /// # Panics
-    /// * If `row >= self.height()`
+    /// * If `row >= self.height`
     ///
     /// # Example
     /// ```
@@ -229,10 +247,10 @@ impl<T> Grid<T> {
 
         let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
-        self.data.drain(start_idx..start_idx + self.width());
-        self.set_height(self.height() - 1);
+        self.data.drain(start_idx..start_idx + self.width);
+        self.set_height(self.height - 1);
 
-        if self.height() == 0 {
+        if self.height == 0 {
             //  no rows remain, so the grid is empty
             self.set_width(0);
         }
@@ -242,8 +260,8 @@ impl<T> Grid<T> {
     ///
     /// # Panics
     /// * If `column_contents.is_empty()`
-    /// * If `column_contents.len() != self.height()`
-    /// * If `column >= self.width()`
+    /// * If `column_contents.len() != self.height`
+    /// * If `column >= self.width`
     ///
     /// # Example
     /// ```
@@ -269,31 +287,30 @@ impl<T> Grid<T> {
 
         self.panic_if_column_length_is_not_equal_to_height(column_contents.len());
 
-        if column > self.width() {
+        if column > self.width {
             // for example, if the width of the grid is 1,
             // we still want to support adding a column at the furthest right
             panic!(
                 "column insertion index (is {}) should be <= width (is {})",
-                column,
-                self.width()
+                column, self.width
             );
         }
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| GridIndex::linear_idx_in(self.width() + 1, GridIndex::new(column, row)))
+            .map(|row| GridIndex::linear_idx_in(self.width + 1, GridIndex::new(column, row)))
             .collect();
 
         for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()) {
             self.data.insert(idx, elem);
         }
 
-        self.set_width(self.width() + 1);
+        self.set_width(self.width + 1);
     }
 
     /// Remove column at `column`, shifting all columns with higher indices "left" (column `n` becomes column `n-1`).
     ///
     /// # Panics
-    /// * If `column >= self.width()`
+    /// * If `column >= self.width`
     ///
     /// # Example
     /// ```
@@ -309,7 +326,7 @@ impl<T> Grid<T> {
     pub fn remove_column(&mut self, column: usize) {
         self.panic_if_column_out_of_bounds(column);
 
-        let indices: Vec<usize> = (0..self.height())
+        let indices: Vec<usize> = (0..self.height)
             .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
             .collect();
 
@@ -317,21 +334,21 @@ impl<T> Grid<T> {
             self.data.remove(idx);
         }
 
-        self.set_width(self.width() - 1);
+        self.set_width(self.width - 1);
 
-        if self.width() == 0 {
+        if self.width == 0 {
             //  no columns remain, so the grid is empty
             self.set_height(0);
         }
     }
 
     fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
-        if idx.row() >= self.height() {
+        if idx.row() >= self.height {
             Err(LinearIndexError::RowTooHigh)
-        } else if idx.column() >= self.width() {
+        } else if idx.column() >= self.width {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Ok(GridIndex::linear_idx_in(self.width(), idx))
+            Ok(GridIndex::linear_idx_in(self.width, idx))
         }
     }
 
@@ -348,41 +365,37 @@ impl<T> Grid<T> {
     }
 
     fn panic_if_row_out_of_bounds(&self, row: usize) {
-        if row >= self.height() {
+        if row >= self.height {
             panic!(
                 "row index out of bounds: the height is {} but the row index is {}",
-                self.height(),
-                row
+                self.height, row
             );
         }
     }
 
     fn panic_if_column_out_of_bounds(&self, column: usize) {
-        if column >= self.width() {
+        if column >= self.width {
             panic!(
                 "column index out of bounds: the width is {} but the column index is {}",
-                self.width(),
-                column
+                self.width, column
             );
         }
     }
 
     fn panic_if_column_length_is_not_equal_to_height(&self, column_length: usize) {
-        if column_length != self.height() {
+        if column_length != self.height {
             panic!(
                 "invalid length of column: was {}, should be {}",
-                column_length,
-                self.height()
+                column_length, self.height
             );
         }
     }
 
     fn panic_if_row_length_is_not_equal_to_width(&self, row_length: usize) {
-        if row_length != self.width() {
+        if row_length != self.width {
             panic!(
                 "invalid length of row: was {}, should be {}",
-                row_length,
-                self.width()
+                row_length, self.width
             );
         }
     }
@@ -412,13 +425,13 @@ where
     pub fn rotate_cw(&self) -> Self {
         let mut rotated_data = Vec::with_capacity(self.area());
 
-        for column in 0..self.width() {
-            for row in (0..self.height()).rev() {
+        for column in 0..self.width {
+            for row in (0..self.height).rev() {
                 rotated_data.push(self[(column, row)].clone());
             }
         }
 
-        Self::new(self.height(), self.width(), rotated_data)
+        Self::new(self.height, self.width, rotated_data)
     }
 
     /// Rotate the grid counter-clockwise 90 degrees, cloning the data into a new grid.
@@ -441,13 +454,13 @@ where
     pub fn rotate_ccw(&self) -> Self {
         let mut rotated_data = Vec::with_capacity(self.area());
 
-        for column in (0..self.width()).rev() {
-            for row in 0..self.height() {
+        for column in (0..self.width).rev() {
+            for row in 0..self.height {
                 rotated_data.push(self[(column, row)].clone());
             }
         }
 
-        Self::new(self.height(), self.width(), rotated_data)
+        Self::new(self.height, self.width, rotated_data)
     }
 
     /// Flip the grid horizontally, so that the first column becomes the last.
@@ -470,13 +483,13 @@ where
     pub fn flip_horizontally(&self) -> Self {
         let mut flipped_data = Vec::with_capacity(self.area());
 
-        for row in 0..self.height() {
-            for column in (0..self.width()).rev() {
+        for row in 0..self.height {
+            for column in (0..self.width).rev() {
                 flipped_data.push(self[(column, row)].clone());
             }
         }
 
-        Self::new(self.width(), self.height(), flipped_data)
+        Self::new(self.width, self.height, flipped_data)
     }
 
     /// Flip the grid vertically, so that the first row becomes the last.
@@ -499,13 +512,13 @@ where
     pub fn flip_vertically(&self) -> Self {
         let mut flipped_data = Vec::with_capacity(self.area());
 
-        for row in (0..self.height()).rev() {
-            for column in 0..self.width() {
+        for row in (0..self.height).rev() {
+            for column in 0..self.width {
                 flipped_data.push(self[(column, row)].clone());
             }
         }
 
-        Self::new(self.width(), self.height(), flipped_data)
+        Self::new(self.width, self.height, flipped_data)
     }
 
     /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x).
@@ -530,13 +543,13 @@ where
     pub fn transpose(&self) -> Self {
         let mut transposed_data = Vec::with_capacity(self.area());
 
-        for column in 0..self.width() {
-            for row in 0..self.height() {
+        for column in 0..self.width {
+            for row in 0..self.height {
                 transposed_data.push(self[(column, row)].clone());
             }
         }
 
-        Self::new(self.height(), self.width(), transposed_data)
+        Self::new(self.height, self.width, transposed_data)
     }
 }
 
@@ -566,6 +579,37 @@ where
     /// ```
     pub fn contains(&self, value: &T) -> bool {
         self.cell_iter().any(|element| element == value)
+    }
+}
+
+impl<T> Grid<T>
+where
+    T: Copy,
+{
+    pub fn swap_rows(&mut self, row1: usize, row2: usize) {
+        self.panic_if_row_out_of_bounds(row1);
+        self.panic_if_row_out_of_bounds(row2);
+
+        if row1 != row2 {
+            for column in 0..self.width {
+                let temp = self[(column, row1)];
+                self[(column, row1)] = self[(column, row2)];
+                self[(column, row2)] = temp;
+            }
+        }
+    }
+
+    pub fn swap_columns(&mut self, column1: usize, column2: usize) {
+        self.panic_if_column_out_of_bounds(column1);
+        self.panic_if_column_out_of_bounds(column2);
+
+        if column1 != column2 {
+            for row in 0..self.height {
+                let temp = self[(column1, row)];
+                self[(column1, row)] = self[(column2, row)];
+                self[(column2, row)] = temp;
+            }
+        }
     }
 }
 
@@ -619,9 +663,9 @@ where
                 padding.push_str(orig);
                 padding
             };
-            (0..self.height())
+            (0..self.height)
                 .map(|r| {
-                    (0..self.width())
+                    (0..self.width)
                         .map(|c| padded_string(&self[(c, r)].to_string()))
                         .collect::<Vec<String>>()
                         .join(" ")
@@ -736,8 +780,8 @@ mod tests {
         assert_eq!(grid.get((5, 2)).unwrap(), &26);
 
         let mut counter = 0;
-        for row in 0..grid.height() {
-            for col in 0..grid.width() {
+        for row in 0..grid.height {
+            for col in 0..grid.width {
                 counter += 1;
                 assert_eq!(grid[(col, row)], counter);
             }
@@ -802,10 +846,10 @@ mod tests {
         let items_in_row_1: Vec<u32> = grid.row_iter(1).copied().collect();
 
         assert_eq!(items_in_row_1, vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
-        assert_eq!(grid.height(), 10);
+        assert_eq!(grid.height, 10);
 
         grid.insert_row(1, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
-        assert_eq!(grid.height(), 11);
+        assert_eq!(grid.height, 11);
     }
 
     #[test]
@@ -831,10 +875,10 @@ mod tests {
         let items_in_row_1: Vec<char> = grid.row_iter(1).cloned().collect();
 
         assert_eq!(items_in_row_1, vec!['c', 'd']);
-        assert_eq!(grid.height(), 3);
+        assert_eq!(grid.height, 3);
 
         grid.remove_row(1);
-        assert_eq!(grid.height(), 2);
+        assert_eq!(grid.height, 2);
     }
 
     #[test]
@@ -846,8 +890,8 @@ mod tests {
         grid.remove_row(0);
 
         assert_eq!(grid, Grid::new(0, 0, Vec::new()));
-        assert_eq!(grid.height(), 0);
-        assert_eq!(grid.width(), 0);
+        assert_eq!(grid.height, 0);
+        assert_eq!(grid.width, 0);
         assert!(grid.is_empty());
 
         // since the grid is now empty, we can add a row of any non-zero length
@@ -863,14 +907,14 @@ mod tests {
         let items_in_column_1: Vec<char> = grid.column_iter(1).copied().collect();
 
         assert_eq!(items_in_column_1, "bdf".chars().collect::<Vec<_>>());
-        assert_eq!(grid.width(), 2);
+        assert_eq!(grid.width, 2);
 
         grid.insert_column(1, "xxx".chars().collect());
 
         let items_in_column_1: Vec<char> = grid.column_iter(1).copied().collect();
 
         assert_eq!(items_in_column_1, "xxx".chars().collect::<Vec<_>>());
-        assert_eq!(grid.width(), 3);
+        assert_eq!(grid.width, 3);
     }
 
     #[test]
@@ -895,10 +939,10 @@ mod tests {
         let items_in_column_1: Vec<_> = grid.column_iter(1).cloned().collect();
 
         assert_eq!(items_in_column_1, vec!['b', 'd', 'f']);
-        assert_eq!(grid.width(), 2);
+        assert_eq!(grid.width, 2);
 
         grid.remove_column(1);
-        assert_eq!(grid.width(), 1);
+        assert_eq!(grid.width, 1);
     }
 
     #[test]
@@ -909,8 +953,8 @@ mod tests {
         grid.remove_column(0);
 
         assert_eq!(grid, Grid::new(0, 0, Vec::new()));
-        assert_eq!(grid.height(), 0);
-        assert_eq!(grid.width(), 0);
+        assert_eq!(grid.height, 0);
+        assert_eq!(grid.width, 0);
         assert!(grid.is_empty());
 
         // since the grid is now empty, we can add a column of any non-zero length
@@ -994,7 +1038,43 @@ mod tests {
         grid.insert_row(0, vec!['g', 'h', 'i', 'j', 'k']);
 
         assert!(!grid.is_empty());
-        assert_eq!(grid.width(), 5);
+        assert_eq!(grid.width, 5);
+    }
+
+    #[test]
+    fn replace_row_test() {
+        let mut grid = small_example_grid();
+
+        grid.replace_row(1, vec!['x', 'x']);
+
+        assert_eq!(grid, Grid::new(2, 3, "abxxef".chars().collect()));
+    }
+
+    #[test]
+    fn replace_column_test() {
+        let mut grid = small_example_grid();
+
+        grid.replace_column(0, vec!['x', 'x', 'x']);
+
+        assert_eq!(grid, Grid::new(2, 3, "xbxdxf".chars().collect()));
+    }
+
+    #[test]
+    fn swap_columns_test() {
+        let mut grid = small_example_grid();
+
+        grid.swap_columns(0, 1);
+
+        assert_eq!(grid, Grid::new(2, 3, "badcfe".chars().collect()));
+    }
+
+    #[test]
+    fn swap_rows_test() {
+        let mut grid = small_example_grid();
+
+        grid.swap_rows(1, 2);
+
+        assert_eq!(grid, Grid::new(2, 3, "abefcd".chars().collect()));
     }
 
     #[test]
