@@ -1,6 +1,10 @@
 #[cfg(feature = "linalg")]
 pub mod linalg;
 
+pub(crate) mod utils;
+
+use utils::*;
+
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -49,7 +53,7 @@ impl<T> Grid<T> {
     pub fn dimensions(&self) -> (usize, usize) {
         (self.width, self.height)
     }
-    
+
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
     /// Note: an empty Grid is not square (even though columns and rows is 0).
@@ -131,7 +135,7 @@ impl<T> Grid<T> {
     /// assert_eq!(items_in_row_2, vec![21, 22, 23, 24, 25, 26, 27, 28, 29, 30]);
     /// ```
     pub fn row_iter(&self, row: usize) -> impl DoubleEndedIterator<Item = &T> {
-        self.panic_if_row_out_of_bounds(row);
+        panic_if_row_out_of_bounds(self, row);
 
         (0..self.width).map(move |column| &self[(column, row)])
     }
@@ -149,7 +153,7 @@ impl<T> Grid<T> {
     /// assert_eq!(items_in_column_2, vec![3, 13, 23, 33, 43, 53, 63, 73, 83, 93]);
     /// ```
     pub fn column_iter(&self, column: usize) -> impl DoubleEndedIterator<Item = &T> {
-        self.panic_if_column_out_of_bounds(column);
+        panic_if_column_out_of_bounds(self, column);
         (0..self.height).map(move |row| &self[(column, row)])
     }
 
@@ -173,7 +177,7 @@ impl<T> Grid<T> {
     /// // c d
     /// ```
     pub fn insert_row(&mut self, row: usize, row_contents: Vec<T>) {
-        Self::panic_if_row_is_empty(&row_contents);
+        panic_if_row_is_empty(&row_contents);
 
         if self.is_empty() && row == 0 {
             // special case, if the grid is empty, we can insert a row of any width
@@ -183,7 +187,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        self.panic_if_row_length_is_not_equal_to_width(row_contents.len());
+        panic_if_row_length_is_not_equal_to_width(self, row_contents.len());
 
         if row > self.height {
             // for example, if the height of the grid is 1,
@@ -209,8 +213,8 @@ impl<T> Grid<T> {
     /// * If `row >= self.height`
     /// * If `data.len() != self.width`
     pub fn replace_row(&mut self, row: usize, data: Vec<T>) {
-        self.panic_if_row_out_of_bounds(row);
-        self.panic_if_row_length_is_not_equal_to_width(data.len());
+        panic_if_row_out_of_bounds(self,row);
+        panic_if_row_length_is_not_equal_to_width(self,data.len());
 
         for (column, elem) in data.into_iter().enumerate() {
             self[(column, row)] = elem;
@@ -223,8 +227,8 @@ impl<T> Grid<T> {
     /// * If `column >= self.width`
     /// * If `data.len() != self.height`
     pub fn replace_column(&mut self, column: usize, data: Vec<T>) {
-        self.panic_if_column_out_of_bounds(column);
-        self.panic_if_column_length_is_not_equal_to_height(data.len());
+        panic_if_column_out_of_bounds(self,column);
+        panic_if_column_length_is_not_equal_to_height(self,data.len());
 
         for (row, elem) in data.into_iter().enumerate() {
             self[(column, row)] = elem;
@@ -247,7 +251,7 @@ impl<T> Grid<T> {
     /// // a b
     /// ```
     pub fn remove_row(&mut self, row: usize) {
-        self.panic_if_row_out_of_bounds(row);
+        panic_if_row_out_of_bounds(self,row);
 
         let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
@@ -279,7 +283,7 @@ impl<T> Grid<T> {
     /// // c x d
     /// ```
     pub fn insert_column(&mut self, column: usize, column_contents: Vec<T>) {
-        Self::panic_if_column_is_empty(&column_contents);
+        panic_if_column_is_empty(&column_contents);
 
         if self.is_empty() && column == 0 {
             // special case, if the grid is empty, we can insert a column of any height
@@ -289,7 +293,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        self.panic_if_column_length_is_not_equal_to_height(column_contents.len());
+        panic_if_column_length_is_not_equal_to_height(self,column_contents.len());
 
         if column > self.width {
             // for example, if the width of the grid is 1,
@@ -328,7 +332,7 @@ impl<T> Grid<T> {
     /// // c
     /// ```
     pub fn remove_column(&mut self, column: usize) {
-        self.panic_if_column_out_of_bounds(column);
+        panic_if_column_out_of_bounds(self,column);
 
         let indices: Vec<usize> = (0..self.height)
             .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
@@ -353,54 +357,6 @@ impl<T> Grid<T> {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
             Ok(GridIndex::linear_idx_in(self.width, idx))
-        }
-    }
-
-    fn panic_if_row_is_empty(row: &[T]) {
-        if row.is_empty() {
-            panic!("row can't be empty");
-        }
-    }
-
-    fn panic_if_column_is_empty(column: &[T]) {
-        if column.is_empty() {
-            panic!("column can't be empty");
-        }
-    }
-
-    fn panic_if_row_out_of_bounds(&self, row: usize) {
-        if row >= self.height {
-            panic!(
-                "row index out of bounds: the height is {} but the row index is {}",
-                self.height, row
-            );
-        }
-    }
-
-    fn panic_if_column_out_of_bounds(&self, column: usize) {
-        if column >= self.width {
-            panic!(
-                "column index out of bounds: the width is {} but the column index is {}",
-                self.width, column
-            );
-        }
-    }
-
-    fn panic_if_column_length_is_not_equal_to_height(&self, column_length: usize) {
-        if column_length != self.height {
-            panic!(
-                "invalid length of column: was {}, should be {}",
-                column_length, self.height
-            );
-        }
-    }
-
-    fn panic_if_row_length_is_not_equal_to_width(&self, row_length: usize) {
-        if row_length != self.width {
-            panic!(
-                "invalid length of row: was {}, should be {}",
-                row_length, self.width
-            );
         }
     }
 }
@@ -591,8 +547,8 @@ where
     T: Copy,
 {
     pub fn swap_rows(&mut self, row1: usize, row2: usize) {
-        self.panic_if_row_out_of_bounds(row1);
-        self.panic_if_row_out_of_bounds(row2);
+        panic_if_row_out_of_bounds(self,row1);
+        panic_if_row_out_of_bounds(self,row2);
 
         if row1 != row2 {
             for column in 0..self.width {
@@ -604,8 +560,8 @@ where
     }
 
     pub fn swap_columns(&mut self, column1: usize, column2: usize) {
-        self.panic_if_column_out_of_bounds(column1);
-        self.panic_if_column_out_of_bounds(column2);
+        panic_if_column_out_of_bounds(self,column1);
+        panic_if_column_out_of_bounds(self,column2);
 
         if column1 != column2 {
             for row in 0..self.height {

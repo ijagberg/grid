@@ -1,4 +1,4 @@
-use crate::Grid;
+use crate::{utils::*, Grid};
 use num_traits::{Float, Num};
 use std::{
     fmt::{Debug, Display},
@@ -43,6 +43,21 @@ where
         Self::new(size, size, data)
     }
 
+    /// Removes a given column and row from the grid, returning the remaining grid.
+    fn minor(&self, skip_column: usize, skip_row: usize) -> Grid<T> {
+        let mut new_vec: Vec<T> = Vec::with_capacity((self.width - 1) * (self.height - 1));
+
+        for row in 0..self.height {
+            for column in 0..self.width {
+                if row != skip_row && column != skip_column {
+                    new_vec.push(self[(column, row)]);
+                }
+            }
+        }
+
+        Grid::new(self.width - 1, self.height - 1, new_vec)
+    }
+
     /// Multiply all elements in a row by some factor.
     ///
     /// # Example
@@ -57,43 +72,39 @@ where
     /// # Panics
     /// * If `row` is out of bounds.
     pub fn multiply_row(&mut self, row: usize, factor: T) {
-        self.panic_if_row_out_of_bounds(row);
+        panic_if_row_out_of_bounds(self, row);
 
         for column in 0..self.width {
             self[(column, row)] = self[(column, row)] * factor;
         }
     }
 
-    fn add_to_row(&mut self, row: usize, from_row: usize, factor: T) {
-        self.panic_if_row_out_of_bounds(row);
-        self.panic_if_row_out_of_bounds(from_row);
+    /// Perform the following row operation:
+    /// 1. Take the contents of row `source_row`, multiplied by `factor`.
+    /// 2. Add the result to row `target_row`.
+    fn add_to_row(&mut self, target_row: usize, source_row: usize, factor: T) {
+        panic_if_row_out_of_bounds(self, target_row);
+        panic_if_row_out_of_bounds(self, source_row);
 
         for column in 0..self.width {
-            self[(column, row)] = self[(column, row)] + (self[(column, from_row)] * factor);
+            self[(column, target_row)] =
+                self[(column, target_row)] + (self[(column, source_row)] * factor);
         }
     }
 
+    /// Returns `true` if the matrix is symmetric (i.e. if its equal to its transpose).
     pub fn is_symmetric(&self) -> bool {
         self == &self.transpose()
     }
 
-    pub fn trace_checked(&self) -> Option<T> {
-        if self.is_empty() || !self.is_square() {
-            None
-        } else {
-            Some(self._trace())
-        }
-    }
-
+    /// Returns the trace (sum of diagonals) of a square matrix.
+    /// The trace of an empty matrix is 0.
+    ///
+    /// # Panics
+    /// * If the grid is not square.
     pub fn trace(&self) -> T {
-        if self.is_empty() || !self.is_square() {
-            panic!()
-        } else {
-            self._trace()
-        }
-    }
+        panic_if_not_square(self);
 
-    fn _trace(&self) -> T {
         let mut sum = T::zero();
         for n in 0..self.width {
             sum = sum + self[(n, n)];
@@ -140,10 +151,13 @@ where
         sum.unwrap()
     }
 
+    /// Returns `true` if all elements below the diagonal are zero.
+    /// # Panics
+    /// * If the grid is empty.
+    /// * If the grid is not square.
     pub fn is_upper_triangular(&self) -> bool {
-        if self.is_empty() || !self.is_square() {
-            return false;
-        }
+        panic_if_empty(self);
+        panic_if_not_square(self);
 
         for row in 0..self.height {
             for column in 0..row {
@@ -156,10 +170,14 @@ where
         true
     }
 
+    /// Returns `true` if all elements above the diagonal are zero.
+    ///
+    /// # Panics
+    /// * If the grid is empty.
+    /// * If the grid is not square.
     pub fn is_lower_triangular(&self) -> bool {
-        if self.is_empty() || !self.is_square() {
-            return false;
-        }
+        panic_if_empty(self);
+        panic_if_not_square(self);
 
         for column in 0..self.width {
             for row in 0..column {
@@ -172,10 +190,16 @@ where
         true
     }
 
+    /// Returns `true` if all elements not on the diagonal are zero.
+    ///
+    /// # Panics
+    /// * If the grid is empty.
+    /// * If the grid is not square.
     pub fn is_triangular(&self) -> bool {
         self.is_upper_triangular() && self.is_lower_triangular()
     }
 
+    /// Returns `true` if all elements in the grid are zero.
     pub fn is_zero(&self) -> bool {
         for row in 0..self.height {
             for column in 0..self.width {
@@ -185,20 +209,6 @@ where
             }
         }
         true
-    }
-
-    fn minor(&self, skip_column: usize, skip_row: usize) -> Grid<T> {
-        let mut new_vec: Vec<T> = Vec::with_capacity((self.width - 1) * (self.height - 1));
-
-        for row in 0..self.height {
-            for column in 0..self.width {
-                if row != skip_row && column != skip_column {
-                    new_vec.push(self[(column, row)]);
-                }
-            }
-        }
-
-        Grid::new(self.width - 1, self.height - 1, new_vec)
     }
 }
 
@@ -306,6 +316,22 @@ where
         Some(identity)
     }
 
+    /// Perform a Gaussian elimination, treating the rightmost column as the solutions to linear equations represented by the other columns.
+    ///
+    /// # Example
+    /// To solve the following system:
+    ///
+    /// `2x + y - z = 8`
+    ///
+    /// `-3x - y + 2z = -11`
+    ///
+    /// `-2x + y + 2z = -3`
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(4, 3, vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.]);
+    /// let solution = grid.gaussian_elimination();
+    /// assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
+    /// ```
     pub fn gaussian_elimination(&mut self) -> GaussianEliminationResult<T> {
         for steps in 0..self.width - 1 {
             // find leftmost non-zero column
@@ -364,9 +390,9 @@ where
     }
 
     fn is_part_of_column_zero(&self, column: usize, row_start: usize, row_end: usize) -> bool {
-        self.panic_if_column_out_of_bounds(column);
-        self.panic_if_row_out_of_bounds(row_start);
-        self.panic_if_row_out_of_bounds(row_end);
+        panic_if_column_out_of_bounds(self, column);
+        panic_if_row_out_of_bounds(self, row_start);
+        panic_if_row_out_of_bounds(self, row_end);
 
         for row in row_start..=row_end {
             if self[(column, row)] != T::zero() {
@@ -485,10 +511,14 @@ where
     }
 }
 
+/// Represents the result of performing a Gaussian elimination on a matrix.
 #[derive(Debug)]
 pub enum GaussianEliminationResult<T> {
+    /// The system has infinite solutions.
     InfiniteSolutions,
+    /// The system has exactly one solution, contained in the variant.
     SingleSolution(Vec<T>),
+    /// The system has no solutions.
     NoSolution,
 }
 
@@ -503,15 +533,6 @@ impl<T> GaussianEliminationResult<T> {
                 panic!("result has no solutions")
             }
         }
-    }
-}
-
-fn panic_if_not_square<T>(grid: &Grid<T>) {
-    if !grid.is_square() {
-        panic!(
-            "matrix is not square: has {} columns, {} rows",
-            grid.width, grid.height
-        );
     }
 }
 
