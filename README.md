@@ -56,3 +56,6 @@ assert_eq!(grid.get((5, 5)).unwrap(), &1001);
 
 ## Serializing/deserializing
 This is only available if the `serde` feature is enabled.
+
+## Linear algebra
+The `linalg` feature includes some methods that are useful for linear algebra. 
