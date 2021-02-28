@@ -46,6 +46,10 @@ impl<T> Grid<T> {
         }
     }
 
+    pub fn dimensions(&self) -> (usize, usize) {
+        (self.width, self.height)
+    }
+    
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
     /// Note: an empty Grid is not square (even though columns and rows is 0).

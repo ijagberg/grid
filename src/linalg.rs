@@ -9,6 +9,22 @@ impl<T> Grid<T>
 where
     T: Num + Copy,
 {
+    /// Generate the identity matrix of size `size`.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut g = Grid::identity(3);
+    /// assert_eq!(g, Grid::new(3, 3, vec![1, 0, 0, 0, 1, 0, 0, 0, 1]));
+    /// println!("{}", g);
+    /// // prints
+    /// // 1 0 0
+    /// // 0 1 0
+    /// // 0 0 1
+    /// ```
+    ///
+    /// # Panics
+    /// * If `size == 0`
     pub fn identity(size: usize) -> Self {
         if size == 0 {
             panic!();
@@ -48,12 +64,12 @@ where
         }
     }
 
-    pub fn add_row(&mut self, row: usize, add: Vec<T>) {
+    fn add_to_row(&mut self, row: usize, from_row: usize, factor: T) {
         self.panic_if_row_out_of_bounds(row);
-        self.panic_if_row_length_is_not_equal_to_width(add.len());
+        self.panic_if_row_out_of_bounds(from_row);
 
-        for (column, elem) in add.into_iter().enumerate() {
-            self[(column, row)] = self[(column, row)] + elem;
+        for column in 0..self.width {
+            self[(column, row)] = self[(column, row)] + (self[(column, from_row)] * factor);
         }
     }
 
@@ -102,9 +118,7 @@ where
             // determinant of an empty grid is 1
             return T::one();
         }
-        if !self.is_square() {
-            panic!("cannot calculate the determinant of a non-square matrix");
-        }
+        panic_if_not_square(self);
 
         if (self.width, self.height) == (1, 1) {
             return self[(0, 0)];
@@ -192,6 +206,106 @@ impl<T> Grid<T>
 where
     T: Copy + Float + Display + Debug,
 {
+    /// Compare this grid with another grid, using an epsilon.
+    ///
+    /// Useful when dealing with matrices containing floating point values.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let a = Grid::new(2, 2, vec![1.5, 2., -5., 0.333333333]);
+    /// let b = Grid::new(2, 2, vec![3./2., 4.0_f64.sqrt(), -3.0 - 2.0, 1.0/3.0]);
+    /// assert!(a.equal_by_epsilon(&b, 0.000000001));
+    /// ```
+    pub fn equal_by_epsilon(&self, other: &Grid<T>, epsilon: T) -> bool {
+        if self.dimensions() != other.dimensions() {
+            false
+        } else {
+            for row in 0..self.height {
+                for column in 0..self.width {
+                    let diff = (self[(column, row)] - other[(column, row)]).abs();
+                    if diff > epsilon {
+                        return false;
+                    }
+                }
+            }
+            true
+        }
+    }
+
+    /// Finds the inverse (if it exists) for a square matrix.
+    ///
+    /// Requires the grid to be `mut`, because Gaussian elimination is performed alongside the identity matrix to generate the inverse.
+    ///
+    /// # Returns
+    /// * `Some` if the inverse was found.
+    /// * `None` if the grid has no inverse (the determinant is zero).
+    ///
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut invertible = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
+    /// let inverse = invertible.inverse().unwrap();
+    /// assert!(inverse.equal_by_epsilon(&Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]), 1e-6));
+    /// ```
+    ///
+    /// # Panics
+    /// * If the grid is not square
+    pub fn inverse(&mut self) -> Option<Grid<T>> {
+        panic_if_not_square(self);
+        if self.determinant() == T::zero() {
+            return None;
+        }
+
+        let mut identity = Self::identity(self.width);
+        for steps in 0..self.width {
+            // find leftmost non-zero column
+            let col = match (steps..self.width)
+                .find(|&c| !self.is_part_of_column_zero(c, steps, self.height - 1))
+            {
+                Some(col) => col,
+                None => {
+                    break;
+                }
+            };
+
+            let row = (steps..self.height)
+                .find(|&r| self[(col, r)] != T::zero())
+                .unwrap();
+
+            self.swap_rows(steps, row);
+            identity.swap_rows(steps, row);
+
+            // multiply row so that first element is 1
+            let factor = T::one() / self[(col, steps)];
+            self.multiply_row(steps, factor);
+            identity.multiply_row(steps, factor);
+
+            for r in steps + 1..self.height {
+                let factor = -self[(col, r)];
+                self.add_to_row(r, steps, factor);
+                identity.add_to_row(r, steps, factor);
+            }
+        }
+
+        for row in (0..self.height).rev() {
+            let non_zero_col = match (0..self.width).find(|&c| self[(c, row)] != T::zero()) {
+                Some(col) => col,
+                None => {
+                    continue;
+                }
+            };
+
+            for r in 0..row {
+                let factor = -self[(non_zero_col, r)];
+                self.add_to_row(r, row, factor);
+                identity.add_to_row(r, row, factor);
+            }
+        }
+
+        Some(identity)
+    }
+
     pub fn gaussian_elimination(&mut self) -> GaussianEliminationResult<T> {
         for steps in 0..self.width - 1 {
             // find leftmost non-zero column
@@ -214,11 +328,9 @@ where
             let factor = T::one() / self[(col, steps)];
             self.multiply_row(steps, factor);
 
-            let processed: Vec<T> = self.row_iter(steps).copied().collect();
             for r in steps + 1..self.height {
                 let factor = -self[(col, r)];
-                let multiplied: Vec<T> = processed.iter().copied().map(|c| c * factor).collect();
-                self.add_row(r, multiplied);
+                self.add_to_row(r, steps, factor);
             }
         }
 
@@ -230,11 +342,10 @@ where
                 }
             };
 
-            let elems_in_row: Vec<T> = self.row_iter(row).copied().collect();
             for r in 0..row {
                 let factor = -self[(non_zero_col, r)];
-                let multiplied: Vec<T> = elems_in_row.iter().copied().map(|e| e * factor).collect();
-                self.add_row(r, multiplied);
+
+                self.add_to_row(r, row, factor);
             }
         }
 
@@ -395,6 +506,15 @@ impl<T> GaussianEliminationResult<T> {
     }
 }
 
+fn panic_if_not_square<T>(grid: &Grid<T>) {
+    if !grid.is_square() {
+        panic!(
+            "matrix is not square: has {} columns, {} rows",
+            grid.width, grid.height
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -404,7 +524,7 @@ mod tests {
     /// `-3x - y + 2z = -11`
     ///
     /// `-2x + y + 2z = -3`
-    fn example_grid() -> Grid<f64> {
+    fn single_solution_grid() -> Grid<f64> {
         Grid::new(
             4,
             3,
@@ -567,7 +687,7 @@ mod tests {
 
     #[test]
     fn gaussian_elimination_test() {
-        let mut single_solution = example_grid();
+        let mut single_solution = single_solution_grid();
         let result = single_solution.gaussian_elimination();
         let solution = result.unwrap_single_solution();
         assert_eq!(solution, vec![2., 3., -1.]);
@@ -588,5 +708,52 @@ mod tests {
             "actual: {:?}",
             result
         );
+    }
+
+    #[test]
+    fn inverse_test() {
+        let original = float_grid(3, 3, vec![3, 0, 2, 2, 0, -2, 0, 1, 1]);
+        let mut invertible = original.clone();
+        let inverse = invertible.inverse().unwrap();
+        compare_float_grids(&invertible, &Grid::identity(3), 0.0000001);
+        compare_float_grids(
+            &inverse,
+            &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
+            0.0000001,
+        );
+
+        let product = original * inverse;
+        compare_float_grids(&product, &Grid::identity(3), 0.0000001);
+    }
+
+    fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>
+    where
+        T: Into<f64>,
+    {
+        Grid::new(width, height, data.into_iter().map(|e| e.into()).collect())
+    }
+
+    fn compare_float_grids(actual: &Grid<f64>, expected: &Grid<f64>, epsilon: f64) {
+        assert_eq!(actual.width, expected.width);
+        assert_eq!(actual.height, expected.height);
+        println!("actual: ");
+        println!("{}", actual);
+        println!("expected: ");
+        println!("{}", expected);
+        for row in 0..actual.height {
+            for column in 0..actual.width {
+                let actual = actual[(column, row)];
+                let expected = expected[(column, row)];
+                let diff = (actual - expected).abs();
+                assert!(
+                    diff < epsilon,
+                    "actual: {}, expected: {}, at index: ({}, {})",
+                    actual,
+                    expected,
+                    column,
+                    row
+                );
+            }
+        }
     }
 }
