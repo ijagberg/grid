@@ -94,7 +94,18 @@ where
 
     /// Returns `true` if the matrix is symmetric (i.e. if its equal to its transpose).
     pub fn is_symmetric(&self) -> bool {
-        self == &self.transpose()
+        if !self.is_square() {
+            false
+        } else {
+            for row in 0..self.height {
+                for column in 0..self.width {
+                    if self[(column, row)] != self[(row, column)] {
+                        return false;
+                    }
+                }
+            }
+            true
+        }
     }
 
     /// Returns the trace (sum of diagonals) of a square matrix.
@@ -389,6 +400,7 @@ where
         GaussianEliminationResult::SingleSolution(solutions)
     }
 
+    /// Returns `true` if elements in the range `row_start..=row_end` in `column` are all zero.
     fn is_part_of_column_zero(&self, column: usize, row_start: usize, row_end: usize) -> bool {
         panic_if_column_out_of_bounds(self, column);
         panic_if_row_out_of_bounds(self, row_start);
@@ -439,21 +451,17 @@ where
 
 impl<T> Mul<T> for Grid<T>
 where
-    T: num_traits::PrimInt,
+    T: num_traits::Num + Mul<T> + Copy,
 {
     type Output = Grid<T>;
 
-    fn mul(self, rhs: T) -> Self::Output {
-        let mut product_vec = Vec::with_capacity(self.area());
-
+    fn mul(mut self, rhs: T) -> Self::Output {
         for row in 0..self.height {
             for column in 0..self.width {
-                let product: T = self[(column, row)] * rhs;
-                product_vec.push(product);
+                self[(column, row)] = self[(column, row)] * rhs;
             }
         }
-
-        Grid::new(self.width, self.height, product_vec)
+        self
     }
 }
 
@@ -744,7 +752,27 @@ mod tests {
         );
 
         let product = original * inverse;
-        compare_float_grids(&product, &Grid::identity(3), 0.0000001);
+        compare_float_grids(&product, &Grid::identity(3), 0.0000000001);
+
+        let original = float_grid(
+            4,
+            4,
+            vec![5, -5, 5, 6, 2, 1, 1, 2, -1, -1, 0, 1, 5, 1, 2, 1],
+        );
+        let mut invertible = original.clone();
+        let inverse = invertible.inverse().unwrap();
+        compare_float_grids(&invertible, &Grid::identity(4), 0.00000000001);
+        compare_float_grids(
+            &inverse,
+            &(float_grid(
+                4,
+                4,
+                vec![
+                    -4, -8, 26, 14, 2, 8, -19, -9, 10, 16, -63, -29, -2, 0, 15, 5,
+                ],
+            ) * (1.0 / 8.0)),
+            0.00001,
+        );
     }
 
     fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>

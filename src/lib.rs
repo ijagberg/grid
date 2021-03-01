@@ -3,6 +3,8 @@ pub mod linalg;
 
 pub(crate) mod utils;
 
+use std::collections::HashMap;
+
 use utils::*;
 
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
@@ -62,20 +64,9 @@ impl<T> Grid<T> {
         !self.is_empty() && self.width == self.height
     }
 
+    /// Returns `true` if `self` has same dimensions as `other`.
     pub fn has_same_dimensions(&self, other: &Grid<T>) -> bool {
         self.width == other.width && self.height == other.height
-    }
-
-    fn data(&self) -> &Vec<T> {
-        &self.data
-    }
-
-    fn set_height(&mut self, v: usize) {
-        self.height = v;
-    }
-
-    fn set_width(&mut self, v: usize) {
-        self.width = v;
     }
 
     fn is_empty(&self) -> bool {
@@ -101,7 +92,7 @@ impl<T> Grid<T> {
     {
         let index: usize = self.linear_idx(GridIndex::from(idx)).ok()?;
 
-        Some(&self.data()[index])
+        Some(&self.data[index])
     }
 
     /// Attempts to get a mutable reference to the element at `idx`
@@ -182,8 +173,8 @@ impl<T> Grid<T> {
 
         if self.is_empty() && row == 0 {
             // special case, if the grid is empty, we can insert a row of any width
-            self.set_width(row_contents.len());
-            self.set_height(1);
+            self.width = row_contents.len();
+            self.height = 1;
             self.data = row_contents;
             return;
         }
@@ -205,7 +196,7 @@ impl<T> Grid<T> {
             self.data.insert(idx, elem);
         }
 
-        self.set_height(self.height + 1);
+        self.height += 1;
     }
 
     /// Replace the contents in a row.
@@ -218,20 +209,6 @@ impl<T> Grid<T> {
         panic_if_row_length_is_not_equal_to_width(self, data.len());
 
         for (column, elem) in data.into_iter().enumerate() {
-            self[(column, row)] = elem;
-        }
-    }
-
-    /// Replace the contents in a column.
-    ///
-    /// # Panics
-    /// * If `column >= self.width`
-    /// * If `data.len() != self.height`
-    pub fn replace_column(&mut self, column: usize, data: Vec<T>) {
-        panic_if_column_out_of_bounds(self, column);
-        panic_if_column_length_is_not_equal_to_height(self, data.len());
-
-        for (row, elem) in data.into_iter().enumerate() {
             self[(column, row)] = elem;
         }
     }
@@ -257,11 +234,28 @@ impl<T> Grid<T> {
         let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
         self.data.drain(start_idx..start_idx + self.width);
-        self.set_height(self.height - 1);
+        self.height -= 1;
 
         if self.height == 0 {
             //  no rows remain, so the grid is empty
-            self.set_width(0);
+            self.width = 0;
+        }
+    }
+
+    /// Swap two rows in the grid.
+    ///
+    /// # Panics
+    /// * If either of the row indices are out of bounds.
+    pub fn swap_rows(&mut self, row1: usize, row2: usize) {
+        panic_if_row_out_of_bounds(self, row1);
+        panic_if_row_out_of_bounds(self, row2);
+
+        if row1 != row2 {
+            for column in 0..self.width {
+                let linear_idx1 = self.linear_idx(GridIndex::new(column, row1)).unwrap();
+                let linear_idx2 = self.linear_idx(GridIndex::new(column, row2)).unwrap();
+                self.data.swap(linear_idx1, linear_idx2);
+            }
         }
     }
 
@@ -288,8 +282,8 @@ impl<T> Grid<T> {
 
         if self.is_empty() && column == 0 {
             // special case, if the grid is empty, we can insert a column of any height
-            self.set_height(column_contents.len());
-            self.set_width(1);
+            self.height = column_contents.len();
+            self.width = 1;
             self.data = column_contents;
             return;
         }
@@ -313,7 +307,38 @@ impl<T> Grid<T> {
             self.data.insert(idx, elem);
         }
 
-        self.set_width(self.width + 1);
+        self.width += 1;
+    }
+
+    /// Replace the contents in a column.
+    ///
+    /// # Panics
+    /// * If `column >= self.width`
+    /// * If `data.len() != self.height`
+    pub fn replace_column(&mut self, column: usize, data: Vec<T>) {
+        panic_if_column_out_of_bounds(self, column);
+        panic_if_column_length_is_not_equal_to_height(self, data.len());
+
+        for (row, elem) in data.into_iter().enumerate() {
+            self[(column, row)] = elem;
+        }
+    }
+
+    /// Swap two columns in the grid.
+    ///
+    /// # Panics
+    /// * If either of the column indices are out of bounds.
+    pub fn swap_columns(&mut self, column1: usize, column2: usize) {
+        panic_if_column_out_of_bounds(self, column1);
+        panic_if_column_out_of_bounds(self, column2);
+
+        if column1 != column2 {
+            for row in 0..self.height {
+                let linear_idx1 = self.linear_idx(GridIndex::new(column1, row)).unwrap();
+                let linear_idx2 = self.linear_idx(GridIndex::new(column2, row)).unwrap();
+                self.data.swap(linear_idx1, linear_idx2);
+            }
+        }
     }
 
     /// Remove column at `column`, shifting all columns with higher indices "left" (column `n` becomes column `n-1`).
@@ -343,11 +368,245 @@ impl<T> Grid<T> {
             self.data.remove(idx);
         }
 
-        self.set_width(self.width - 1);
-
+        self.width -= 1;
         if self.width == 0 {
             //  no columns remain, so the grid is empty
-            self.set_height(0);
+            self.height = 0;
+        }
+    }
+
+    pub fn swap_cells<I>(&mut self, a: I, b: I)
+    where
+        GridIndex: From<I>,
+    {
+        let a_idx = GridIndex::from(a);
+        let b_idx = GridIndex::from(b);
+        let a_linear = self.linear_idx(a_idx).unwrap();
+        let b_linear = self.linear_idx(b_idx).unwrap();
+        self.data.swap(a_linear, b_linear);
+    }
+
+    /// Rotate the grid counter-clockwise 90 degrees.
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    ///
+    /// grid.rotate_ccw();
+    /// assert_eq!(grid, Grid::new(2, 2, "bdac".chars().collect()));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // b d
+    /// // a c
+    /// ```
+    pub fn rotate_ccw(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let new_width = self.height;
+        let new_height = self.width;
+
+        let mut target_index = HashMap::new();
+
+        let mut current_target = 0;
+
+        for column in (0..self.width).rev() {
+            for row in 0..self.height {
+                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+                target_index.insert(from, current_target);
+                current_target += 1;
+            }
+        }
+
+        self.transform(target_index);
+
+        self.width = new_width;
+        self.height = new_height;
+    }
+
+    /// Rotate the grid clockwise 90 degrees.
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    ///
+    /// grid.rotate_cw();
+    /// assert_eq!(grid, Grid::new(2, 2, "cadb".chars().collect()));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // c a
+    /// // d b
+    /// ```
+    pub fn rotate_cw(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let new_width = self.height;
+        let new_height = self.width;
+
+        let mut target_index = HashMap::new();
+
+        let mut current_target = 0;
+
+        for column in 0..self.width {
+            for row in (0..self.height).rev() {
+                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+                target_index.insert(from, current_target);
+                current_target += 1;
+            }
+        }
+
+        self.transform(target_index);
+
+        self.width = new_width;
+        self.height = new_height;
+    }
+
+    /// Flip the grid horizontally, so that the first column becomes the last.
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    ///
+    /// grid.flip_horizontally();
+    /// assert_eq!(grid, Grid::new(2, 2, "badc".chars().collect()));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // b a
+    /// // d c
+    /// ```
+    pub fn flip_horizontally(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let mut target_index = HashMap::new();
+
+        let mut current_target = 0;
+
+        for row in 0..self.height {
+            for column in (0..self.width).rev() {
+                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+                target_index.insert(from, current_target);
+                current_target += 1;
+            }
+        }
+
+        self.transform(target_index);
+    }
+
+    /// Flip the grid vertically, so that the first row becomes the last.
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    ///
+    /// grid.flip_vertically();
+    /// assert_eq!(grid, Grid::new(2, 2, "cdab".chars().collect()));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // c d
+    /// // a b
+    /// ```
+    pub fn flip_vertically(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let mut target_index = HashMap::new();
+
+        let mut current_target = 0;
+
+        for row in (0..self.height).rev() {
+            for column in 0..self.width {
+                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+                target_index.insert(from, current_target);
+                current_target += 1;
+            }
+        }
+
+        self.transform(target_index);
+    }
+
+    /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x).
+    ///
+    /// # Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 3, "abcdef".chars().collect());
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a b
+    /// // c d
+    /// // e f
+    ///
+    /// grid.transpose();
+    /// assert_eq!(grid, Grid::new(3, 2, "acebdf".chars().collect()));
+    /// println!("{}", grid);
+    /// // prints:
+    /// // a c e
+    /// // b d f
+    /// ```
+    pub fn transpose(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let new_width = self.height;
+        let new_height = self.width;
+
+        let mut target_index = HashMap::new();
+
+        let mut current_target = 0;
+
+        for column in 0..self.width {
+            for row in 0..self.height {
+                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+                target_index.insert(from, current_target);
+                current_target += 1;
+            }
+        }
+
+        self.transform(target_index);
+
+        self.width = new_width;
+        self.height = new_height;
+    }
+
+    /// Transforms the Grid, moving the contents of cells to new indices based on a hashmap.
+    fn transform(&mut self, mut target_index: HashMap<usize, usize>) {
+        while !target_index.is_empty() {
+            let current = *target_index.keys().next().unwrap();
+            let mut target = target_index.remove(&current).unwrap();
+
+            loop {
+                // swap current with its target until a cycle has been reached
+                self.data.swap(current, target);
+                match target_index.remove(&target) {
+                    Some(t) => target = t,
+                    None => {
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -359,158 +618,6 @@ impl<T> Grid<T> {
         } else {
             Ok(GridIndex::linear_idx_in(self.width, idx))
         }
-    }
-}
-
-impl<T> Grid<T>
-where
-    T: Clone,
-{
-    /// Rotate the grid clockwise 90 degrees, cloning the data into a new grid.
-    /// # Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
-    /// // prints:
-    /// // a b
-    /// // c d
-    ///
-    /// let cw = grid.rotate_cw();
-    /// assert_eq!(cw, Grid::new(2, 2, "cadb".chars().collect()));
-    /// println!("{}", cw);
-    /// // prints:
-    /// // c a
-    /// // d b
-    /// ```
-    pub fn rotate_cw(&self) -> Self {
-        let mut rotated_data = Vec::with_capacity(self.area());
-
-        for column in 0..self.width {
-            for row in (0..self.height).rev() {
-                rotated_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.height, self.width, rotated_data)
-    }
-
-    /// Rotate the grid counter-clockwise 90 degrees, cloning the data into a new grid.
-    /// # Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
-    /// // prints:
-    /// // a b
-    /// // c d
-    ///
-    /// let ccw = grid.rotate_ccw();
-    /// assert_eq!(ccw, Grid::new(2, 2, "bdac".chars().collect()));
-    /// println!("{}", ccw);
-    /// // prints:
-    /// // b d
-    /// // a c
-    /// ```
-    pub fn rotate_ccw(&self) -> Self {
-        let mut rotated_data = Vec::with_capacity(self.area());
-
-        for column in (0..self.width).rev() {
-            for row in 0..self.height {
-                rotated_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.height, self.width, rotated_data)
-    }
-
-    /// Flip the grid horizontally, so that the first column becomes the last.
-    /// # Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
-    /// // prints:
-    /// // a b
-    /// // c d
-    ///
-    /// let hori = grid.flip_horizontally();
-    /// assert_eq!(hori, Grid::new(2, 2, "badc".chars().collect()));
-    /// println!("{}", hori);
-    /// // prints:
-    /// // b a
-    /// // d c
-    /// ```
-    pub fn flip_horizontally(&self) -> Self {
-        let mut flipped_data = Vec::with_capacity(self.area());
-
-        for row in 0..self.height {
-            for column in (0..self.width).rev() {
-                flipped_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.width, self.height, flipped_data)
-    }
-
-    /// Flip the grid vertically, so that the first row becomes the last.
-    /// # Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
-    /// // prints:
-    /// // a b
-    /// // c d
-    ///
-    /// let vert = grid.flip_vertically();
-    /// assert_eq!(vert, Grid::new(2, 2, "cdab".chars().collect()));
-    /// println!("{}", vert);
-    /// // prints:
-    /// // c d
-    /// // a b
-    /// ```
-    pub fn flip_vertically(&self) -> Self {
-        let mut flipped_data = Vec::with_capacity(self.area());
-
-        for row in (0..self.height).rev() {
-            for column in 0..self.width {
-                flipped_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.width, self.height, flipped_data)
-    }
-
-    /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x).
-    ///
-    /// # Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
-    /// println!("{}", grid);
-    /// // prints:
-    /// // a b
-    /// // c d
-    /// // e f
-    ///
-    /// let transposed = grid.transpose();
-    /// assert_eq!(transposed, Grid::new(3, 2, "acebdf".chars().collect()));
-    /// println!("{}", transposed);
-    /// // prints:
-    /// // a c e
-    /// // b d f
-    /// ```
-    pub fn transpose(&self) -> Self {
-        let mut transposed_data = Vec::with_capacity(self.area());
-
-        for column in 0..self.width {
-            for row in 0..self.height {
-                transposed_data.push(self[(column, row)].clone());
-            }
-        }
-
-        Self::new(self.height, self.width, transposed_data)
     }
 }
 
@@ -540,37 +647,6 @@ where
     /// ```
     pub fn contains(&self, value: &T) -> bool {
         self.cell_iter().any(|element| element == value)
-    }
-}
-
-impl<T> Grid<T>
-where
-    T: Copy,
-{
-    pub fn swap_rows(&mut self, row1: usize, row2: usize) {
-        panic_if_row_out_of_bounds(self, row1);
-        panic_if_row_out_of_bounds(self, row2);
-
-        if row1 != row2 {
-            for column in 0..self.width {
-                let temp = self[(column, row1)];
-                self[(column, row1)] = self[(column, row2)];
-                self[(column, row2)] = temp;
-            }
-        }
-    }
-
-    pub fn swap_columns(&mut self, column1: usize, column2: usize) {
-        panic_if_column_out_of_bounds(self, column1);
-        panic_if_column_out_of_bounds(self, column2);
-
-        if column1 != column2 {
-            for row in 0..self.height {
-                let temp = self[(column1, row)];
-                self[(column1, row)] = self[(column2, row)];
-                self[(column2, row)] = temp;
-            }
-        }
     }
 }
 
@@ -797,7 +873,7 @@ mod tests {
     fn new_default_test() {
         let grid: Grid<u32> = Grid::new_default(10, 1);
 
-        assert_eq!(grid.data(), &vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]);
+        assert_eq!(grid.data, vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]);
     }
 
     #[test]
@@ -926,51 +1002,51 @@ mod tests {
 
     #[test]
     fn rotate_cw_test() {
-        let grid = small_example_grid();
+        let mut grid = small_example_grid();
 
-        let rotated = grid.rotate_cw();
+        grid.rotate_cw();
 
-        assert_eq!(rotated, Grid::new(3, 2, vec!['e', 'c', 'a', 'f', 'd', 'b']));
+        assert_eq!(grid, Grid::new(3, 2, vec!['e', 'c', 'a', 'f', 'd', 'b']));
     }
 
     #[test]
     fn rotate_ccw_test() {
-        let grid = small_example_grid();
+        let mut grid = small_example_grid();
 
-        let rotated = grid.rotate_ccw();
+        grid.rotate_ccw();
 
-        assert_eq!(rotated, Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
+        assert_eq!(grid, Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
     }
 
     #[test]
     fn flip_horizontally_test() {
-        let grid = small_example_grid();
+        let mut grid = small_example_grid();
 
-        let flipped = grid.flip_horizontally();
+        grid.flip_horizontally();
 
-        assert_eq!(flipped, Grid::new(2, 3, vec!['b', 'a', 'd', 'c', 'f', 'e']));
+        assert_eq!(grid, Grid::new(2, 3, vec!['b', 'a', 'd', 'c', 'f', 'e']));
     }
 
     #[test]
     fn flip_vertically_test() {
-        let grid = small_example_grid();
+        let mut grid = small_example_grid();
 
-        let flipped = grid.flip_vertically();
+        grid.flip_vertically();
 
-        assert_eq!(flipped, Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
+        assert_eq!(grid, Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
     }
 
     #[test]
     fn transpose_test() {
-        let grid = small_example_grid();
+        let original_grid = small_example_grid();
+        let mut grid = original_grid.clone();
+        grid.transpose();
 
-        let transposed = grid.transpose();
+        assert_eq!(grid, Grid::new(3, 2, "acebdf".chars().collect()));
 
-        assert_eq!(transposed, Grid::new(3, 2, "acebdf".chars().collect()));
+        grid.transpose();
 
-        let transposed_again = transposed.transpose();
-
-        assert_eq!(grid, transposed_again);
+        assert_eq!(grid, original_grid);
     }
 
     #[test]
