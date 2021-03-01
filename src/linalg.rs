@@ -131,7 +131,7 @@ where
         }
         panic_if_not_square(self);
 
-        if (self.width, self.height) == (1, 1) {
+        if self.dimensions() == (1, 1) {
             return self[(0, 0)];
         }
 
@@ -216,7 +216,7 @@ impl<T> Grid<T>
 where
     T: Copy + Float + Display + Debug,
 {
-    /// Compare this grid with another grid, using an epsilon.
+    /// Check this grid and another for equality, using an epsilon.
     ///
     /// Useful when dealing with matrices containing floating point values.
     ///
@@ -228,7 +228,7 @@ where
     /// assert!(a.equal_by_epsilon(&b, 0.000000001));
     /// ```
     pub fn equal_by_epsilon(&self, other: &Grid<T>, epsilon: T) -> bool {
-        if self.dimensions() != other.dimensions() {
+        if !self.has_same_dimensions(other) {
             false
         } else {
             for row in 0..self.height {

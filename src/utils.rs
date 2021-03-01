@@ -1,17 +1,20 @@
 use crate::Grid;
 
+#[inline(always)]
 pub(crate) fn panic_if_row_is_empty<T>(row: &[T]) {
     if row.is_empty() {
         panic!("row can't be empty");
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_column_is_empty<T>(column: &[T]) {
     if column.is_empty() {
         panic!("column can't be empty");
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_row_out_of_bounds<T>(grid: &Grid<T>, row: usize) {
     if row >= grid.height {
         panic!(
@@ -21,6 +24,7 @@ pub(crate) fn panic_if_row_out_of_bounds<T>(grid: &Grid<T>, row: usize) {
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_column_out_of_bounds<T>(grid: &Grid<T>, column: usize) {
     if column >= grid.width {
         panic!(
@@ -30,6 +34,7 @@ pub(crate) fn panic_if_column_out_of_bounds<T>(grid: &Grid<T>, column: usize) {
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_column_length_is_not_equal_to_height<T>(
     grid: &Grid<T>,
     column_length: usize,
@@ -42,6 +47,7 @@ pub(crate) fn panic_if_column_length_is_not_equal_to_height<T>(
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_row_length_is_not_equal_to_width<T>(grid: &Grid<T>, row_length: usize) {
     if row_length != grid.width {
         panic!(
@@ -51,12 +57,14 @@ pub(crate) fn panic_if_row_length_is_not_equal_to_width<T>(grid: &Grid<T>, row_l
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_empty<T>(grid: &Grid<T>) {
     if grid.is_empty() {
         panic!("matrix is empty");
     }
 }
 
+#[inline(always)]
 pub(crate) fn panic_if_not_square<T>(grid: &Grid<T>) {
     if !grid.is_square() {
         panic!(
