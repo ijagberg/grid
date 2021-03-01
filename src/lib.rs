@@ -53,6 +53,12 @@ impl<T> Grid<T> {
     }
 
     /// Returns a tuple containing the (width, height) of the grid.
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
+    /// assert_eq!(grid.dimensions(), (2, 3));
+    /// ```
     pub fn dimensions(&self) -> (usize, usize) {
         (self.width, self.height)
     }
@@ -60,6 +66,14 @@ impl<T> Grid<T> {
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
     /// Note: an empty Grid is not square (even though columns and rows is 0).
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, vec![1, 2, 3, 4]);
+    /// assert!(grid.is_square());
+    /// let grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
+    /// assert!(!grid.is_square());
+    /// ```
     pub fn is_square(&self) -> bool {
         !self.is_empty() && self.width == self.height
     }
@@ -79,13 +93,26 @@ impl<T> Grid<T> {
     }
 
     /// Returns the area (number of columns * number of rows) of the grid.
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 3, vec![2, 4, 8, 16, 32, 64]);
+    /// assert_eq!(grid.area(), 6);
+    /// ```
     pub fn area(&self) -> usize {
         self.width * self.height
     }
 
     /// Attempts to get a reference to the element at `idx`.
-    ///
+    /// 
     /// Returns `None` if `idx` is out of bounds.
+    /// # Example 
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 3, vec![2, 4, 8, 16, 32, 64]);
+    /// assert_eq!(grid.get((1, 1)), Some(&16));
+    /// assert!(grid.get((10, 15)).is_none());
+    /// ```
     pub fn get<I>(&self, idx: I) -> Option<&T>
     where
         GridIndex: From<I>,
