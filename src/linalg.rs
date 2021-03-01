@@ -531,6 +531,7 @@ pub enum GaussianEliminationResult<T> {
 }
 
 impl<T> GaussianEliminationResult<T> {
+    /// Unwrap the solution single solution to a linear equation, panicking if there were zero or infinite solutions.
     pub fn unwrap_single_solution(self) -> Vec<T> {
         match self {
             GaussianEliminationResult::InfiniteSolutions => {

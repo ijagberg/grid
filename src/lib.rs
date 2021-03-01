@@ -610,6 +610,7 @@ impl<T> Grid<T> {
         }
     }
 
+    // Convert a GridIndex into an index in the internal data of the Grid.
     fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
         if idx.row() >= self.height {
             Err(LinearIndexError::RowTooHigh)
