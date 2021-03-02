@@ -561,8 +561,8 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for row in rows(self).rev() {
-            for column in columns(self) {
+        for row in self.rows().rev() {
+            for column in self.columns() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
@@ -648,16 +648,21 @@ impl<T> Grid<T> {
         GridIndex::to_linear_idx_in(self.width, idx)
     }
 
+    /// Return an iterator over the row indices in this grid.
     fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
-        rows(self)
+        0..self.height
     }
 
+    /// Return an iterator over the column indices in this grid.
     fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
-        columns(self)
+        0..self.width
     }
 
-    fn indices(&self) -> impl DoubleEndedIterator<Item = (usize, usize, GridIndex)> {
-        cells(self)
+    /// Return an iterator over the cell indices in this grid.
+    fn indices(&self) -> impl DoubleEndedIterator<Item = GridIndex> {
+        let height = self.height;
+        let width = self.width;
+        (0..height).flat_map(move |row| (0..width).map(move |column| GridIndex::new(column, row)))
     }
 }
 

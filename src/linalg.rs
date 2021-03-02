@@ -97,8 +97,8 @@ where
         if !self.is_square() {
             false
         } else {
-            for (column, row, _) in self.indices() {
-                if self[(column, row)] != self[(row, column)] {
+            for idx in self.indices() {
+                if self[(idx.column(), idx.row())] != self[(idx.row(), idx.column())] {
                     return false;
                 }
             }
@@ -210,12 +210,7 @@ where
 
     /// Returns `true` if all elements in the grid are zero.
     pub fn is_zero(&self) -> bool {
-        for (_, _, idx) in self.indices() {
-            if self[idx] != T::zero() {
-                return false;
-            }
-        }
-        true
+        self.cell_iter().all(|c| c == &T::zero())
     }
 }
 
@@ -238,7 +233,7 @@ where
         if self.dimensions() != other.dimensions() {
             false
         } else {
-            for (_, _, idx) in self.indices() {
+            for idx in self.indices() {
                 let diff = (self[idx] - other[idx]).abs();
                 if diff > epsilon {
                     return false;
@@ -450,7 +445,7 @@ where
     type Output = Grid<T>;
 
     fn mul(mut self, rhs: T) -> Self::Output {
-        for (_, _, idx) in self.indices() {
+        for idx in self.indices() {
             self[idx] = self[idx] * rhs;
         }
         self
@@ -474,7 +469,7 @@ where
 
         let mut sum_vec = Vec::with_capacity(self.area());
 
-        for (_, _, idx) in self.indices() {
+        for idx in self.indices() {
             sum_vec.push(self[idx] + rhs[idx]);
         }
         Grid::new(self.width, self.height, sum_vec)
@@ -498,7 +493,7 @@ where
 
         let mut sum_vec = Vec::with_capacity(self.area());
 
-        for (_, _, idx) in self.indices() {
+        for idx in self.indices() {
             sum_vec.push(self[idx] - rhs[idx]);
         }
         Grid::new(self.width, self.height, sum_vec)
