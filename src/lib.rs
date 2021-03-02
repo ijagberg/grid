@@ -25,6 +25,7 @@ impl<T> Grid<T> {
     ///
     /// # Panics
     /// * If `width * height != data.len()`
+    /// * If one of (but not both) `width` and `height` is zero.
     ///
     /// # Example
     /// ```
@@ -45,6 +46,10 @@ impl<T> Grid<T> {
                 data.len()
             );
         }
+        if (width == 0) ^ (height == 0) {
+            panic!("if either width or height is 0, both must be 0");
+        }
+
         Self {
             width,
             height,
@@ -76,11 +81,6 @@ impl<T> Grid<T> {
     /// ```
     pub fn is_square(&self) -> bool {
         !self.is_empty() && self.width == self.height
-    }
-
-    /// Returns `true` if `self` has same dimensions as `other`.
-    pub fn has_same_dimensions(&self, other: &Grid<T>) -> bool {
-        self.width == other.width && self.height == other.height
     }
 
     fn is_empty(&self) -> bool {
@@ -217,7 +217,7 @@ impl<T> Grid<T> {
             );
         }
 
-        let start_idx = GridIndex::linear_idx_in(self.width, GridIndex::new(0, row));
+        let start_idx = GridIndex::to_linear_idx_in(self.width, GridIndex::new(0, row));
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
@@ -278,7 +278,7 @@ impl<T> Grid<T> {
         panic_if_row_out_of_bounds(self, row2);
 
         if row1 != row2 {
-            for column in 0..self.width {
+            for column in self.columns() {
                 let linear_idx1 = self.linear_idx(GridIndex::new(column, row1)).unwrap();
                 let linear_idx2 = self.linear_idx(GridIndex::new(column, row2)).unwrap();
                 self.data.swap(linear_idx1, linear_idx2);
@@ -327,7 +327,7 @@ impl<T> Grid<T> {
         }
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| GridIndex::linear_idx_in(self.width + 1, GridIndex::new(column, row)))
+            .map(|row| GridIndex::to_linear_idx_in(self.width + 1, GridIndex::new(column, row)))
             .collect();
 
         for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()) {
@@ -360,7 +360,7 @@ impl<T> Grid<T> {
         panic_if_column_out_of_bounds(self, column2);
 
         if column1 != column2 {
-            for row in 0..self.height {
+            for row in self.rows() {
                 let linear_idx1 = self.linear_idx(GridIndex::new(column1, row)).unwrap();
                 let linear_idx2 = self.linear_idx(GridIndex::new(column2, row)).unwrap();
                 self.data.swap(linear_idx1, linear_idx2);
@@ -387,7 +387,8 @@ impl<T> Grid<T> {
     pub fn remove_column(&mut self, column: usize) {
         panic_if_column_out_of_bounds(self, column);
 
-        let indices: Vec<usize> = (0..self.height)
+        let indices: Vec<usize> = self
+            .rows()
             .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
             .collect();
 
@@ -451,8 +452,8 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for column in (0..self.width).rev() {
-            for row in 0..self.height {
+        for column in self.columns().rev() {
+            for row in self.rows() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
@@ -488,8 +489,8 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for column in 0..self.width {
-            for row in (0..self.height).rev() {
+        for column in self.columns() {
+            for row in self.rows().rev() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
@@ -525,8 +526,8 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for row in 0..self.height {
-            for column in (0..self.width).rev() {
+        for row in self.rows() {
+            for column in self.columns().rev() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
@@ -560,8 +561,8 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for row in (0..self.height).rev() {
-            for column in 0..self.width {
+        for row in rows(self).rev() {
+            for column in columns(self) {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
@@ -597,9 +598,10 @@ impl<T> Grid<T> {
 
         let mut target_index = HashMap::new();
         let mut current_target = 0;
-        for column in 0..self.width {
-            for row in 0..self.height {
-                let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
+        for column in self.columns() {
+            for row in self.rows() {
+                let idx = GridIndex::new(column, row);
+                let from = self.linear_idx(idx).unwrap();
                 target_index.insert(from, current_target);
                 current_target += 1;
             }
@@ -629,15 +631,33 @@ impl<T> Grid<T> {
         }
     }
 
-    // Convert a GridIndex into an index in the internal data of the Grid.
+    /// Convert a GridIndex into an index in the internal data of the Grid.
     fn linear_idx(&self, idx: GridIndex) -> Result<usize, LinearIndexError> {
         if idx.row() >= self.height {
             Err(LinearIndexError::RowTooHigh)
         } else if idx.column() >= self.width {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Ok(GridIndex::linear_idx_in(self.width, idx))
+            Ok(GridIndex::to_linear_idx_in(self.width, idx))
         }
+    }
+
+    /// Same as `linear_idx`, but panics when `idx` is out of bounds.
+    fn linear_idx_unchecked(&self, idx: GridIndex) -> usize {
+        panic_if_index_out_of_bounds(self, idx);
+        GridIndex::to_linear_idx_in(self.width, idx)
+    }
+
+    fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
+        rows(self)
+    }
+
+    fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
+        columns(self)
+    }
+
+    fn indices(&self) -> impl DoubleEndedIterator<Item = (usize, usize, GridIndex)> {
+        cells(self)
     }
 }
 
@@ -688,7 +708,7 @@ where
     fn index(&self, index: I) -> &Self::Output {
         let index: GridIndex = GridIndex::from(index);
 
-        let linear = self.linear_idx(index).unwrap();
+        let linear = self.linear_idx_unchecked(index);
 
         &self.data[linear]
     }
@@ -701,7 +721,7 @@ where
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         let index: GridIndex = GridIndex::from(index);
 
-        let linear = self.linear_idx(index).unwrap();
+        let linear = self.linear_idx_unchecked(index);
 
         &mut self.data[linear]
     }
@@ -720,9 +740,9 @@ where
                 padding.push_str(orig);
                 padding
             };
-            (0..self.height)
+            self.rows()
                 .map(|r| {
-                    (0..self.width)
+                    self.columns()
                         .map(|c| padded_string(&self[(c, r)].to_string()))
                         .collect::<Vec<String>>()
                         .join(" ")
@@ -756,7 +776,7 @@ impl GridIndex {
         self.1
     }
 
-    pub(crate) fn linear_idx_in(width: usize, idx: GridIndex) -> usize {
+    pub(crate) fn to_linear_idx_in(width: usize, idx: GridIndex) -> usize {
         idx.row() * width + idx.column()
     }
 }
@@ -793,8 +813,6 @@ impl std::fmt::Display for LinearIndexError {
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
-    use std::vec;
-
     use super::*;
 
     fn example_grid_u32() -> Grid<u32> {
@@ -843,6 +861,10 @@ mod tests {
                 assert_eq!(grid[(col, row)], counter);
             }
         }
+
+        // this should fail
+        let result = std::panic::catch_unwind(|| grid[(11, 11)]);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1135,7 +1157,7 @@ mod tests {
     }
 
     #[test]
-    fn swap_cells_test(){
+    fn swap_cells_test() {
         let mut grid = small_example_grid();
         grid.swap_cells((1, 1), (0, 2));
 

@@ -47,8 +47,8 @@ where
     fn minor(&self, skip_column: usize, skip_row: usize) -> Grid<T> {
         let mut new_vec: Vec<T> = Vec::with_capacity((self.width - 1) * (self.height - 1));
 
-        for row in 0..self.height {
-            for column in 0..self.width {
+        for row in self.rows() {
+            for column in self.columns() {
                 if row != skip_row && column != skip_column {
                     new_vec.push(self[(column, row)]);
                 }
@@ -74,7 +74,7 @@ where
     pub fn multiply_row(&mut self, row: usize, factor: T) {
         panic_if_row_out_of_bounds(self, row);
 
-        for column in 0..self.width {
+        for column in self.columns() {
             self[(column, row)] = self[(column, row)] * factor;
         }
     }
@@ -86,7 +86,7 @@ where
         panic_if_row_out_of_bounds(self, target_row);
         panic_if_row_out_of_bounds(self, source_row);
 
-        for column in 0..self.width {
+        for column in self.columns() {
             self[(column, target_row)] =
                 self[(column, target_row)] + (self[(column, source_row)] * factor);
         }
@@ -97,11 +97,9 @@ where
         if !self.is_square() {
             false
         } else {
-            for row in 0..self.height {
-                for column in 0..self.width {
-                    if self[(column, row)] != self[(row, column)] {
-                        return false;
-                    }
+            for (column, row, _) in self.indices() {
+                if self[(column, row)] != self[(row, column)] {
+                    return false;
                 }
             }
             true
@@ -117,7 +115,7 @@ where
         panic_if_not_square(self);
 
         let mut sum = T::zero();
-        for n in 0..self.width {
+        for n in self.columns() {
             sum = sum + self[(n, n)];
         }
 
@@ -148,7 +146,7 @@ where
 
         let mut sum: Option<T> = None;
 
-        for column in 0..self.width {
+        for column in self.columns() {
             let scalar = self[(column, 0)];
             let minor = self.minor(column, 0);
             let product = scalar * minor.determinant();
@@ -170,7 +168,7 @@ where
         panic_if_empty(self);
         panic_if_not_square(self);
 
-        for row in 0..self.height {
+        for row in self.rows() {
             for column in 0..row {
                 if self[(column, row)] != T::zero() {
                     return false;
@@ -190,7 +188,7 @@ where
         panic_if_empty(self);
         panic_if_not_square(self);
 
-        for column in 0..self.width {
+        for column in self.columns() {
             for row in 0..column {
                 if self[(column, row)] != T::zero() {
                     return false;
@@ -212,11 +210,9 @@ where
 
     /// Returns `true` if all elements in the grid are zero.
     pub fn is_zero(&self) -> bool {
-        for row in 0..self.height {
-            for column in 0..self.width {
-                if self[(column, row)] != T::zero() {
-                    return false;
-                }
+        for (_, _, idx) in self.indices() {
+            if self[idx] != T::zero() {
+                return false;
             }
         }
         true
@@ -239,15 +235,13 @@ where
     /// assert!(a.equal_by_epsilon(&b, 0.000000001));
     /// ```
     pub fn equal_by_epsilon(&self, other: &Grid<T>, epsilon: T) -> bool {
-        if !self.has_same_dimensions(other) {
+        if self.dimensions() != other.dimensions() {
             false
         } else {
-            for row in 0..self.height {
-                for column in 0..self.width {
-                    let diff = (self[(column, row)] - other[(column, row)]).abs();
-                    if diff > epsilon {
-                        return false;
-                    }
+            for (_, _, idx) in self.indices() {
+                let diff = (self[idx] - other[idx]).abs();
+                if diff > epsilon {
+                    return false;
                 }
             }
             true
@@ -279,7 +273,7 @@ where
         }
 
         let mut identity = Self::identity(self.width);
-        for steps in 0..self.width {
+        for steps in self.columns() {
             // find leftmost non-zero column
             let col = match (steps..self.width)
                 .find(|&c| !self.is_part_of_column_zero(c, steps, self.height - 1))
@@ -309,8 +303,8 @@ where
             }
         }
 
-        for row in (0..self.height).rev() {
-            let non_zero_col = match (0..self.width).find(|&c| self[(c, row)] != T::zero()) {
+        for row in self.rows().rev() {
+            let non_zero_col = match self.columns().find(|&c| self[(c, row)] != T::zero()) {
                 Some(col) => col,
                 None => {
                     continue;
@@ -371,7 +365,7 @@ where
             }
         }
 
-        for row in (0..self.height).rev() {
+        for row in self.rows().rev() {
             let non_zero_col = match (0..self.width - 1).find(|&c| self[(c, row)] != T::zero()) {
                 Some(col) => col,
                 None => {
@@ -386,7 +380,7 @@ where
             }
         }
 
-        for row in 0..self.height {
+        for row in self.rows() {
             if (0..self.width - 1).all(|column| self[(column, row)] == T::zero()) {
                 if self[(self.width - 1, row)] != T::zero() {
                     return GaussianEliminationResult::NoSolution;
@@ -416,7 +410,7 @@ where
     }
 }
 
-impl<'a, T> Mul<Grid<T>> for Grid<T>
+impl<T> Mul for Grid<T>
 where
     T: Mul<T, Output = T> + Add<T, Output = T> + Copy,
 {
@@ -432,8 +426,8 @@ where
 
         let mut product_vec: Vec<T> = Vec::with_capacity(self.height * rhs.width);
 
-        for lhs_row in 0..self.height {
-            for rhs_column in 0..rhs.width {
+        for lhs_row in self.rows() {
+            for rhs_column in rhs.columns() {
                 let mut sum = None;
                 for (&l, &r) in self.row_iter(lhs_row).zip(rhs.column_iter(rhs_column)) {
                     match sum {
@@ -456,10 +450,8 @@ where
     type Output = Grid<T>;
 
     fn mul(mut self, rhs: T) -> Self::Output {
-        for row in 0..self.height {
-            for column in 0..self.width {
-                self[(column, row)] = self[(column, row)] * rhs;
-            }
+        for (_, _, idx) in self.indices() {
+            self[idx] = self[idx] * rhs;
         }
         self
     }
@@ -472,7 +464,7 @@ where
     type Output = Grid<T>;
 
     fn add(self, rhs: Grid<T>) -> Self::Output {
-        if self.width != rhs.width || self.height != rhs.height {
+        if self.dimensions() != rhs.dimensions() {
             panic!("invalid matrix dimensions for addition, lhs: {} columns, {} rows, rhs: {} columns, {} rows", 
                 self.width,
                 self.height,
@@ -482,12 +474,9 @@ where
 
         let mut sum_vec = Vec::with_capacity(self.area());
 
-        for row in 0..self.height {
-            for column in 0..self.width {
-                sum_vec.push(self[(column, row)] + rhs[(column, row)]);
-            }
+        for (_, _, idx) in self.indices() {
+            sum_vec.push(self[idx] + rhs[idx]);
         }
-
         Grid::new(self.width, self.height, sum_vec)
     }
 }
@@ -499,7 +488,7 @@ where
     type Output = Grid<T>;
 
     fn sub(self, rhs: Grid<T>) -> Self::Output {
-        if self.width != rhs.width || self.height != rhs.height {
+        if self.dimensions() != rhs.dimensions() {
             panic!("invalid matrix dimensions for addition, lhs: {} columns, {} rows, rhs: {} columns, {} rows",
                 self.width,
                 self.height,
@@ -509,12 +498,9 @@ where
 
         let mut sum_vec = Vec::with_capacity(self.area());
 
-        for row in 0..self.height {
-            for column in 0..self.width {
-                sum_vec.push(self[(column, row)] - rhs[(column, row)]);
-            }
+        for (_, _, idx) in self.indices() {
+            sum_vec.push(self[idx] - rhs[idx]);
         }
-
         Grid::new(self.width, self.height, sum_vec)
     }
 }

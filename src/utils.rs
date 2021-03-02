@@ -1,6 +1,26 @@
 use crate::{Grid, GridIndex};
 
 #[inline(always)]
+pub(crate) fn rows<T>(grid: &Grid<T>) -> impl DoubleEndedIterator<Item = usize> {
+    0..grid.height
+}
+
+#[inline(always)]
+pub(crate) fn columns<T>(grid: &Grid<T>) -> impl DoubleEndedIterator<Item = usize> {
+    0..grid.width
+}
+
+pub(crate) fn cells<T>(grid: &'_ Grid<T>) -> impl DoubleEndedIterator<Item = (usize, usize, GridIndex)> {
+    _cells(grid.width, grid.height)
+}
+
+fn _cells(width: usize, height: usize) -> impl DoubleEndedIterator<Item = (usize, usize, GridIndex)> {
+    (0..height).flat_map(move |row| {
+        (0..width).map(move |column| (column, row, GridIndex::new(column, row)))
+    })
+}
+
+#[inline(always)]
 pub(crate) fn panic_if_index_out_of_bounds<T>(grid: &Grid<T>, index: GridIndex) {
     panic_if_row_out_of_bounds(grid, index.row());
     panic_if_column_out_of_bounds(grid, index.column());
