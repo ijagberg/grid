@@ -1,4 +1,10 @@
-use crate::Grid;
+use crate::{Grid, GridIndex};
+
+#[inline(always)]
+pub(crate) fn panic_if_index_out_of_bounds<T>(grid: &Grid<T>, index: GridIndex) {
+    panic_if_row_out_of_bounds(grid, index.row());
+    panic_if_column_out_of_bounds(grid, index.column());
+}
 
 #[inline(always)]
 pub(crate) fn panic_if_row_is_empty<T>(row: &[T]) {

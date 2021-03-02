@@ -104,9 +104,9 @@ impl<T> Grid<T> {
     }
 
     /// Attempts to get a reference to the element at `idx`.
-    /// 
+    ///
     /// Returns `None` if `idx` is out of bounds.
-    /// # Example 
+    /// # Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 3, vec![2, 4, 8, 16, 32, 64]);
@@ -402,12 +402,26 @@ impl<T> Grid<T> {
         }
     }
 
+    /// Swap the values in two cells in the grid.
+    /// # Panics
+    /// * If either index is out of bounds.
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
+    /// grid.swap_cells((1, 1), (0, 2));
+    /// assert_eq!(grid, Grid::new(2, 3, vec![1, 2, 3, 5, 4, 6]));
+    /// ```
     pub fn swap_cells<I>(&mut self, a: I, b: I)
     where
         GridIndex: From<I>,
     {
         let a_idx = GridIndex::from(a);
         let b_idx = GridIndex::from(b);
+
+        panic_if_index_out_of_bounds(self, a_idx);
+        panic_if_index_out_of_bounds(self, b_idx);
+
         let a_linear = self.linear_idx(a_idx).unwrap();
         let b_linear = self.linear_idx(b_idx).unwrap();
         self.data.swap(a_linear, b_linear);
@@ -435,13 +449,8 @@ impl<T> Grid<T> {
             return;
         }
 
-        let new_width = self.height;
-        let new_height = self.width;
-
         let mut target_index = HashMap::new();
-
         let mut current_target = 0;
-
         for column in (0..self.width).rev() {
             for row in 0..self.height {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
@@ -452,8 +461,7 @@ impl<T> Grid<T> {
 
         self.transform(target_index);
 
-        self.width = new_width;
-        self.height = new_height;
+        std::mem::swap(&mut self.width, &mut self.height);
     }
 
     /// Rotate the grid clockwise 90 degrees.
@@ -478,13 +486,8 @@ impl<T> Grid<T> {
             return;
         }
 
-        let new_width = self.height;
-        let new_height = self.width;
-
         let mut target_index = HashMap::new();
-
         let mut current_target = 0;
-
         for column in 0..self.width {
             for row in (0..self.height).rev() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
@@ -495,8 +498,7 @@ impl<T> Grid<T> {
 
         self.transform(target_index);
 
-        self.width = new_width;
-        self.height = new_height;
+        std::mem::swap(&mut self.width, &mut self.height);
     }
 
     /// Flip the grid horizontally, so that the first column becomes the last.
@@ -522,9 +524,7 @@ impl<T> Grid<T> {
         }
 
         let mut target_index = HashMap::new();
-
         let mut current_target = 0;
-
         for row in 0..self.height {
             for column in (0..self.width).rev() {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
@@ -559,9 +559,7 @@ impl<T> Grid<T> {
         }
 
         let mut target_index = HashMap::new();
-
         let mut current_target = 0;
-
         for row in (0..self.height).rev() {
             for column in 0..self.width {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
@@ -597,13 +595,8 @@ impl<T> Grid<T> {
             return;
         }
 
-        let new_width = self.height;
-        let new_height = self.width;
-
         let mut target_index = HashMap::new();
-
         let mut current_target = 0;
-
         for column in 0..self.width {
             for row in 0..self.height {
                 let from = self.linear_idx(GridIndex::new(column, row)).unwrap();
@@ -614,8 +607,7 @@ impl<T> Grid<T> {
 
         self.transform(target_index);
 
-        self.width = new_width;
-        self.height = new_height;
+        std::mem::swap(&mut self.width, &mut self.height);
     }
 
     /// Transforms the Grid, moving the contents of cells to new indices based on a hashmap.
@@ -1140,6 +1132,14 @@ mod tests {
         grid.swap_rows(1, 2);
 
         assert_eq!(grid, Grid::new(2, 3, "abefcd".chars().collect()));
+    }
+
+    #[test]
+    fn swap_cells_test(){
+        let mut grid = small_example_grid();
+        grid.swap_cells((1, 1), (0, 2));
+
+        assert_eq!(grid, Grid::new(2, 3, "abcedf".chars().collect()));
     }
 
     #[test]
