@@ -46,15 +46,47 @@ impl<T> Grid<T> {
                 data.len()
             );
         }
-        if (width == 0) ^ (height == 0) {
-            panic!("if either width or height is 0, both must be 0");
-        }
+        panic_if_width_xor_height_is_zero(width, height);
 
         Self {
             width,
             height,
             data,
         }
+    }
+
+    pub fn subgrid(
+        self,
+        column_start: usize,
+        row_start: usize,
+        width: usize,
+        height: usize,
+    ) -> Grid<T> {
+        panic_if_width_xor_height_is_zero(width, height);
+        panic_if_column_out_of_bounds(&self, column_start);
+        panic_if_row_out_of_bounds(&self, row_start);
+
+        let column_end = column_start + width;
+        let row_end = row_start + height;
+
+        let is_within_bounds = |idx: GridIndex| {
+            idx.column() >= column_start
+                && idx.column() < column_end
+                && idx.row() >= row_start
+                && idx.row() < row_end
+        };
+
+        let indices = self.indices();
+        let mut data = self.data;
+
+        for idx in indices.rev() {
+            if !is_within_bounds(idx) {
+                let linear_idx = GridIndex::to_linear_idx_in(self.width, idx);
+                data.remove(linear_idx);
+            }
+        }
+
+        Grid::new(column_end - column_start, row_end - row_start, data)
     }
 
     /// Returns a tuple containing the (width, height) of the grid.
@@ -228,19 +260,26 @@ impl<T> Grid<T> {
 
     /// Replace the contents in a row.
     ///
+    /// Returns the old elements of the row.
+    ///
     /// # Panics
     /// * If `row >= self.height`
     /// * If `data.len() != self.width`
-    pub fn replace_row(&mut self, row: usize, data: Vec<T>) {
+    pub fn replace_row(&mut self, row: usize, data: Vec<T>) -> Vec<T> {
         panic_if_row_out_of_bounds(self, row);
         panic_if_row_length_is_not_equal_to_width(self, data.len());
 
+        let mut old = Vec::with_capacity(self.width);
         for (column, elem) in data.into_iter().enumerate() {
-            self[(column, row)] = elem;
+            let old_value = self.replace_cell((column, row), elem);
+            old.push(old_value);
         }
+        old
     }
 
     /// Remove row at `row`, shifting all rows with higher indices "upward" (row `n` becomes row `n-1`).
+    ///
+    /// Returns the row that was removed.
     ///
     /// # Panics
     /// * If `row >= self.height`
@@ -255,18 +294,19 @@ impl<T> Grid<T> {
     /// // prints:
     /// // a b
     /// ```
-    pub fn remove_row(&mut self, row: usize) {
+    pub fn remove_row(&mut self, row: usize) -> Vec<T> {
         panic_if_row_out_of_bounds(self, row);
 
         let start_idx = self.linear_idx(GridIndex::new(0, row)).unwrap();
 
-        self.data.drain(start_idx..start_idx + self.width);
+        let r: Vec<T> = self.data.drain(start_idx..start_idx + self.width).collect();
         self.height -= 1;
 
         if self.height == 0 {
             //  no rows remain, so the grid is empty
             self.width = 0;
         }
+        r
     }
 
     /// Swap two rows in the grid.
@@ -339,16 +379,22 @@ impl<T> Grid<T> {
 
     /// Replace the contents in a column.
     ///
+    /// Returns the old elements of the column.
+    ///
     /// # Panics
     /// * If `column >= self.width`
     /// * If `data.len() != self.height`
-    pub fn replace_column(&mut self, column: usize, data: Vec<T>) {
+    pub fn replace_column(&mut self, column: usize, data: Vec<T>) -> Vec<T> {
         panic_if_column_out_of_bounds(self, column);
         panic_if_column_length_is_not_equal_to_height(self, data.len());
 
+        let mut old = Vec::with_capacity(self.height);
         for (row, elem) in data.into_iter().enumerate() {
-            self[(column, row)] = elem;
+            let old_value = self.replace_cell((column, row), elem);
+            old.push(old_value);
         }
+
+        old
     }
 
     /// Swap two columns in the grid.
@@ -370,6 +416,8 @@ impl<T> Grid<T> {
 
     /// Remove column at `column`, shifting all columns with higher indices "left" (column `n` becomes column `n-1`).
     ///
+    /// Returns the column that was removed.
+    ///
     /// # Panics
     /// * If `column >= self.width`
     ///
@@ -384,7 +432,7 @@ impl<T> Grid<T> {
     /// // a
     /// // c
     /// ```
-    pub fn remove_column(&mut self, column: usize) {
+    pub fn remove_column(&mut self, column: usize) -> Vec<T> {
         panic_if_column_out_of_bounds(self, column);
 
         let indices: Vec<usize> = self
@@ -392,8 +440,11 @@ impl<T> Grid<T> {
             .map(|row| self.linear_idx(GridIndex::new(column, row)).unwrap())
             .collect();
 
+        let mut c = Vec::with_capacity(self.height);
+
         for idx in indices.into_iter().rev() {
-            self.data.remove(idx);
+            let elem = self.data.remove(idx);
+            c.insert(0, elem);
         }
 
         self.width -= 1;
@@ -401,6 +452,8 @@ impl<T> Grid<T> {
             //  no columns remain, so the grid is empty
             self.height = 0;
         }
+
+        c
     }
 
     /// Swap the values in two cells in the grid.
@@ -426,6 +479,16 @@ impl<T> Grid<T> {
         let a_linear = self.linear_idx(a_idx).unwrap();
         let b_linear = self.linear_idx(b_idx).unwrap();
         self.data.swap(a_linear, b_linear);
+    }
+
+    pub fn replace_cell<I>(&mut self, idx: I, elem: T) -> T
+    where
+        GridIndex: From<I>,
+    {
+        let idx = GridIndex::from(idx);
+        panic_if_index_out_of_bounds(self, idx);
+        let linear = self.linear_idx_unchecked(idx);
+        std::mem::replace(&mut self.data[linear], elem)
     }
 
     /// Rotate the grid counter-clockwise 90 degrees.
@@ -818,6 +881,8 @@ impl std::fmt::Display for LinearIndexError {
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
+    use std::fmt::{Debug, Display};
+
     use super::*;
 
     fn example_grid_u32() -> Grid<u32> {
@@ -878,11 +943,11 @@ mod tests {
 
         *grid.get_mut((0, 1)).unwrap() = 'x';
 
-        assert_eq!(grid, Grid::new(2, 3, "abxdef".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abxdef".chars().collect()));
 
         grid[(0, 2)] = 'y';
 
-        assert_eq!(grid, Grid::new(2, 3, "abxdyf".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abxdyf".chars().collect()));
     }
 
     #[test]
@@ -947,9 +1012,9 @@ mod tests {
 
         assert_eq!(items_in_bottom_row, new_row);
 
-        assert_eq!(
-            grid,
-            Grid::new(2, 4, "abcdefxx".chars().collect::<Vec<_>>())
+        assert_grid_equal(
+            &grid,
+            &Grid::new(2, 4, "abcdefxx".chars().collect::<Vec<_>>()),
         );
     }
 
@@ -961,7 +1026,8 @@ mod tests {
         assert_eq!(items_in_row_1, vec!['c', 'd']);
         assert_eq!(grid.height, 3);
 
-        grid.remove_row(1);
+        let removed_row = grid.remove_row(1);
+        assert_eq!(removed_row, items_in_row_1);
         assert_eq!(grid.height, 2);
     }
 
@@ -973,7 +1039,7 @@ mod tests {
         grid.remove_row(0);
         grid.remove_row(0);
 
-        assert_eq!(grid, Grid::new(0, 0, Vec::new()));
+        assert_grid_equal(&grid, &Grid::new(0, 0, Vec::new()));
         assert_eq!(grid.height, 0);
         assert_eq!(grid.width, 0);
         assert!(grid.is_empty());
@@ -981,7 +1047,7 @@ mod tests {
         // since the grid is now empty, we can add a row of any non-zero length
         grid.insert_row(0, vec!['a', 'b', 'c']);
 
-        assert_eq!(grid, Grid::new(3, 1, vec!['a', 'b', 'c']));
+        assert_grid_equal(&grid, &Grid::new(3, 1, vec!['a', 'b', 'c']));
     }
 
     #[test]
@@ -1011,9 +1077,9 @@ mod tests {
 
         assert_eq!(items_in_column_2, new_column);
 
-        assert_eq!(
-            grid,
-            Grid::new(3, 3, "abxcdxefx".chars().collect::<Vec<_>>())
+        assert_grid_equal(
+            &grid,
+            &Grid::new(3, 3, "abxcdxefx".chars().collect::<Vec<_>>()),
         );
     }
 
@@ -1025,7 +1091,8 @@ mod tests {
         assert_eq!(items_in_column_1, vec!['b', 'd', 'f']);
         assert_eq!(grid.width, 2);
 
-        grid.remove_column(1);
+        let removed = grid.remove_column(1);
+        assert_eq!(removed, items_in_column_1);
         assert_eq!(grid.width, 1);
     }
 
@@ -1036,7 +1103,7 @@ mod tests {
         grid.remove_column(0);
         grid.remove_column(0);
 
-        assert_eq!(grid, Grid::new(0, 0, Vec::new()));
+        assert_grid_equal(&grid, &Grid::new(0, 0, Vec::new()));
         assert_eq!(grid.height, 0);
         assert_eq!(grid.width, 0);
         assert!(grid.is_empty());
@@ -1044,7 +1111,7 @@ mod tests {
         // since the grid is now empty, we can add a column of any non-zero length
         grid.insert_column(0, vec!['a', 'b', 'c']);
 
-        assert_eq!(grid, Grid::new(1, 3, vec!['a', 'b', 'c']));
+        assert_grid_equal(&grid, &Grid::new(1, 3, vec!['a', 'b', 'c']));
     }
 
     #[test]
@@ -1053,7 +1120,7 @@ mod tests {
 
         grid.rotate_cw();
 
-        assert_eq!(grid, Grid::new(3, 2, vec!['e', 'c', 'a', 'f', 'd', 'b']));
+        assert_grid_equal(&grid, &Grid::new(3, 2, vec!['e', 'c', 'a', 'f', 'd', 'b']));
     }
 
     #[test]
@@ -1062,7 +1129,7 @@ mod tests {
 
         grid.rotate_ccw();
 
-        assert_eq!(grid, Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
+        assert_grid_equal(&grid, &Grid::new(3, 2, vec!['b', 'd', 'f', 'a', 'c', 'e']));
     }
 
     #[test]
@@ -1071,7 +1138,7 @@ mod tests {
 
         grid.flip_horizontally();
 
-        assert_eq!(grid, Grid::new(2, 3, vec!['b', 'a', 'd', 'c', 'f', 'e']));
+        assert_grid_equal(&grid, &Grid::new(2, 3, vec!['b', 'a', 'd', 'c', 'f', 'e']));
     }
 
     #[test]
@@ -1080,7 +1147,7 @@ mod tests {
 
         grid.flip_vertically();
 
-        assert_eq!(grid, Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
+        assert_grid_equal(&grid, &Grid::new(2, 3, vec!['e', 'f', 'c', 'd', 'a', 'b']));
     }
 
     #[test]
@@ -1089,11 +1156,11 @@ mod tests {
         let mut grid = original_grid.clone();
         grid.transpose();
 
-        assert_eq!(grid, Grid::new(3, 2, "acebdf".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(3, 2, "acebdf".chars().collect()));
 
         grid.transpose();
 
-        assert_eq!(grid, original_grid);
+        assert_grid_equal(&grid, &original_grid);
     }
 
     #[test]
@@ -1129,18 +1196,22 @@ mod tests {
     fn replace_row_test() {
         let mut grid = small_example_grid();
 
-        grid.replace_row(1, vec!['x', 'x']);
+        let items_in_row_1: Vec<char> = grid.row_iter(1).copied().collect();
+        let old_row = grid.replace_row(1, vec!['x', 'x']);
 
-        assert_eq!(grid, Grid::new(2, 3, "abxxef".chars().collect()));
+        assert_eq!(old_row, items_in_row_1);
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abxxef".chars().collect()));
     }
 
     #[test]
     fn replace_column_test() {
         let mut grid = small_example_grid();
 
-        grid.replace_column(0, vec!['x', 'x', 'x']);
+        let items_in_column_0: Vec<char> = grid.column_iter(0).copied().collect();
+        let old_column = grid.replace_column(0, vec!['x', 'x', 'x']);
 
-        assert_eq!(grid, Grid::new(2, 3, "xbxdxf".chars().collect()));
+        assert_eq!(old_column, items_in_column_0);
+        assert_grid_equal(&grid, &Grid::new(2, 3, "xbxdxf".chars().collect()));
     }
 
     #[test]
@@ -1149,7 +1220,7 @@ mod tests {
 
         grid.swap_columns(0, 1);
 
-        assert_eq!(grid, Grid::new(2, 3, "badcfe".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(2, 3, "badcfe".chars().collect()));
     }
 
     #[test]
@@ -1158,7 +1229,7 @@ mod tests {
 
         grid.swap_rows(1, 2);
 
-        assert_eq!(grid, Grid::new(2, 3, "abefcd".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abefcd".chars().collect()));
     }
 
     #[test]
@@ -1166,7 +1237,29 @@ mod tests {
         let mut grid = small_example_grid();
         grid.swap_cells((1, 1), (0, 2));
 
-        assert_eq!(grid, Grid::new(2, 3, "abcedf".chars().collect()));
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abcedf".chars().collect()));
+    }
+
+    #[test]
+    fn subgrid_test() {
+        let grid = example_grid_u32();
+        let subgrid = grid.subgrid(2, 1, 3, 5);
+        assert_grid_equal(
+            &subgrid,
+            &Grid::new(
+                3,
+                5,
+                vec![13, 14, 15, 23, 24, 25, 33, 34, 35, 43, 44, 45, 53, 54, 55],
+            ),
+        );
+    }
+
+    #[test]
+    fn replace_cell_test() {
+        let mut grid = small_example_grid();
+        let old_value = grid.replace_cell((0, 1), 'x');
+        assert_eq!(old_value, 'c');
+        assert_grid_equal(&grid, &Grid::new(2, 3, "abxdef".chars().collect()));
     }
 
     #[test]
@@ -1177,5 +1270,16 @@ mod tests {
         let json = serde_json::to_string(&grid).unwrap();
 
         println!("{}", json);
+    }
+
+    fn assert_grid_equal<T>(actual: &Grid<T>, expected: &Grid<T>)
+    where
+        T: Display + PartialEq + Debug,
+    {
+        println!("actual:");
+        println!("{}", actual);
+        println!("expected:");
+        println!("{}", expected);
+        assert_eq!(actual, expected);
     }
 }

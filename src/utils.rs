@@ -79,3 +79,10 @@ pub(crate) fn panic_if_not_square<T>(grid: &Grid<T>) {
         );
     }
 }
+
+#[inline(always)]
+pub(crate) fn panic_if_width_xor_height_is_zero(width: usize, height: usize) {
+    if (width == 0) ^ (height == 0) {
+        panic!("if either width or height is 0, both must be 0");
+    }
+}
