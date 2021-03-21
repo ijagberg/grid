@@ -4,7 +4,6 @@ pub mod linalg;
 pub(crate) mod utils;
 
 use std::collections::HashMap;
-
 use utils::*;
 
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
@@ -481,6 +480,12 @@ impl<T> Grid<T> {
         self.data.swap(a_linear, b_linear);
     }
 
+    /// Replace the contents in a cell.
+    ///
+    /// Returns the old element of the cell.
+    ///
+    /// # Panics
+    /// * If `idx` is out of bounds.
     pub fn replace_cell<I>(&mut self, idx: I, elem: T) -> T
     where
         GridIndex: From<I>,
