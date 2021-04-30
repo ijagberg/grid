@@ -14,9 +14,9 @@ use utils::*;
 #[non_exhaustive]
 pub struct Grid<T> {
     /// The width of the grid (number of columns).
-    pub width: usize,
+    pub(crate) width: usize,
     /// The height of the grid (number of rows).
-    pub height: usize,
+    pub(crate) height: usize,
     /// The data of the grid, stored in a linear array of `width * height` length.
     data: Vec<T>,
 }
@@ -54,6 +54,16 @@ impl<T> Grid<T> {
             height,
             data,
         }
+    }
+
+    /// Returns the width (number of columns) of the `Grid`.
+    pub fn width(&self) -> usize {
+        self.width
+    }
+    
+    /// Returns the height (number of rows) of the `Grid`.
+    pub fn height(&self) -> usize {
+        self.height
     }
 
     pub fn subgrid(
