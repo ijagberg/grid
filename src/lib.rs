@@ -728,13 +728,29 @@ impl<T> Grid<T> {
         GridIndex::to_linear_idx_in(self.width, idx)
     }
 
-    /// Return an iterator over the row indices in this grid.
-    fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
+    /// Return an iterator over the row indices in this grid. Allows you to write `for row in grid.rows()` instead of `for row in 0..grid.height()`.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<u32> = Grid::new_default(3, 5);
+    /// let rows: Vec<usize> = grid.rows().collect();
+    /// assert_eq!(rows, vec![0, 1, 2, 3, 4]);
+    /// ```
+    pub fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
         0..self.height
     }
 
-    /// Return an iterator over the column indices in this grid.
-    fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
+    /// Return an iterator over the column indices in this grid. Allows you to write `for column in grid.columns()` instead of `for column in 0..grid.width()`.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<u32> = Grid::new_default(2, 5);
+    /// let rows: Vec<usize> = grid.columns().collect();
+    /// assert_eq!(rows, vec![0, 1]);
+    /// ```
+    pub fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
         0..self.width
     }
 
