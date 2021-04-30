@@ -64,12 +64,21 @@ pub(crate) fn panic_if_row_length_is_not_equal_to_width<T>(grid: &Grid<T>, row_l
 }
 
 #[inline(always)]
+pub(crate) fn panic_if_width_xor_height_is_zero(width: usize, height: usize) {
+    if (width == 0) ^ (height == 0) {
+        panic!("if either width or height is 0, both must be 0");
+    }
+}
+
+#[cfg(feature = "linalg")]
+#[inline(always)]
 pub(crate) fn panic_if_empty<T>(grid: &Grid<T>) {
     if grid.is_empty() {
         panic!("matrix is empty");
     }
 }
 
+#[cfg(feature = "linalg")]
 #[inline(always)]
 pub(crate) fn panic_if_not_square<T>(grid: &Grid<T>) {
     if !grid.is_square() {
@@ -77,12 +86,5 @@ pub(crate) fn panic_if_not_square<T>(grid: &Grid<T>) {
             "matrix is not square: has {} columns, {} rows",
             grid.width, grid.height
         );
-    }
-}
-
-#[inline(always)]
-pub(crate) fn panic_if_width_xor_height_is_zero(width: usize, height: usize) {
-    if (width == 0) ^ (height == 0) {
-        panic!("if either width or height is 0, both must be 0");
     }
 }
