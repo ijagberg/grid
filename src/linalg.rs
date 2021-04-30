@@ -11,7 +11,10 @@ where
 {
     /// Generate the identity matrix of size `size`.
     ///
-    /// # Example
+    /// ## Panics
+    /// * If `size == 0`
+    ///
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let mut g = Grid::identity(3);
@@ -22,9 +25,6 @@ where
     /// // 0 1 0
     /// // 0 0 1
     /// ```
-    ///
-    /// # Panics
-    /// * If `size == 0`
     pub fn identity(size: usize) -> Self {
         if size == 0 {
             panic!();
@@ -60,7 +60,10 @@ where
 
     /// Multiply all elements in a row by some factor.
     ///
-    /// # Example
+    /// ## Panics
+    /// * If `row` is out of bounds.
+    ///
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let mut g = Grid::new(2, 2, vec![3, 8, 4, 6]);
@@ -68,9 +71,6 @@ where
     /// assert_eq!(g[(0, 1)], 20);
     /// assert_eq!(g[(1, 1)], 30);
     /// ```
-    ///
-    /// # Panics
-    /// * If `row` is out of bounds.
     pub fn multiply_row(&mut self, row: usize, factor: T) {
         panic_if_row_out_of_bounds(self, row);
 
@@ -109,8 +109,8 @@ where
     /// Returns the trace (sum of diagonals) of a square matrix.
     /// The trace of an empty matrix is 0.
     ///
-    /// # Panics
-    /// * If the grid is not square.
+    /// ## Panics
+    /// * If `self` is not a square grid.
     pub fn trace(&self) -> T {
         panic_if_not_square(self);
 
@@ -124,15 +124,15 @@ where
 
     /// Calculate the determinant of a square `Grid`.
     ///
-    /// # Example
+    /// ## Panics
+    /// * If `self` is not a square grid.
+    ///
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let two_by_two = Grid::new(2, 2, vec![3, 8, 4, 6]);
     /// assert_eq!(two_by_two.determinant(), -14);
     /// ```
-    ///
-    /// # Panics
-    /// * If `self` is not a square grid.
     pub fn determinant(&self) -> T {
         if self.is_empty() {
             // determinant of an empty grid is 1
@@ -161,9 +161,10 @@ where
     }
 
     /// Returns `true` if all elements below the diagonal are zero.
-    /// # Panics
-    /// * If the grid is empty.
-    /// * If the grid is not square.
+    ///
+    /// ## Panics
+    /// * If `self` is empty.
+    /// * If `self` is not a square grid.
     pub fn is_upper_triangular(&self) -> bool {
         panic_if_empty(self);
         panic_if_not_square(self);
@@ -181,9 +182,9 @@ where
 
     /// Returns `true` if all elements above the diagonal are zero.
     ///
-    /// # Panics
-    /// * If the grid is empty.
-    /// * If the grid is not square.
+    /// ## Panics
+    /// * If `self` is empty.
+    /// * If `self` is not a square grid.
     pub fn is_lower_triangular(&self) -> bool {
         panic_if_empty(self);
         panic_if_not_square(self);
@@ -201,9 +202,9 @@ where
 
     /// Returns `true` if all elements not on the diagonal are zero.
     ///
-    /// # Panics
-    /// * If the grid is empty.
-    /// * If the grid is not square.
+    /// ## Panics
+    /// * If `self` is empty.
+    /// * If `self` is not a square grid.
     pub fn is_triangular(&self) -> bool {
         self.is_upper_triangular() && self.is_lower_triangular()
     }
@@ -222,7 +223,7 @@ where
     ///
     /// Useful when dealing with matrices containing floating point values.
     ///
-    /// # Example
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let a = Grid::new(2, 2, vec![1.5, 2., -5., 0.333333333]);
@@ -245,22 +246,22 @@ where
 
     /// Finds the inverse (if it exists) for a square matrix.
     ///
-    /// Requires the grid to be `mut`, because Gaussian elimination is performed alongside the identity matrix to generate the inverse.
+    /// Requires the `self` to be `mut`, because Gaussian elimination is performed alongside the identity matrix to generate the inverse.
     ///
     /// # Returns
     /// * `Some` if the inverse was found.
     /// * `None` if the grid has no inverse (the determinant is zero).
     ///
-    /// # Example
+    /// ## Panics
+    /// * If `self` is not a square grid.
+    ///
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let mut invertible = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
     /// let inverse = invertible.inverse().unwrap();
     /// assert!(inverse.equal_by_epsilon(&Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]), 1e-6));
     /// ```
-    ///
-    /// # Panics
-    /// * If the grid is not square
     pub fn inverse(&mut self) -> Option<Grid<T>> {
         panic_if_not_square(self);
         if self.determinant() == T::zero() {
@@ -318,7 +319,7 @@ where
 
     /// Perform a Gaussian elimination, treating the rightmost column as the solutions to linear equations represented by the other columns.
     ///
-    /// # Example
+    /// ## Example
     /// To solve the following system:
     ///
     /// `2x + y - z = 8`
@@ -390,6 +391,11 @@ where
     }
 
     /// Returns `true` if elements in the range `row_start..=row_end` in `column` are all zero.
+    ///
+    /// ## Panics
+    /// * If `column` is out of bounds.
+    /// * If `row_start` is out of bounds.
+    /// * If `row_end` is out of bounds.
     fn is_part_of_column_zero(&self, column: usize, row_start: usize, row_end: usize) -> bool {
         panic_if_column_out_of_bounds(self, column);
         panic_if_row_out_of_bounds(self, row_start);
@@ -440,7 +446,7 @@ where
 
 impl<T> Mul<T> for Grid<T>
 where
-    T: num_traits::Num + Mul<T> + Copy,
+    T: Num + Mul<T> + Copy,
 {
     type Output = Grid<T>;
 
@@ -484,7 +490,7 @@ where
 
     fn sub(self, rhs: Grid<T>) -> Self::Output {
         if self.dimensions() != rhs.dimensions() {
-            panic!("invalid matrix dimensions for addition, lhs: {} columns, {} rows, rhs: {} columns, {} rows",
+            panic!("invalid matrix dimensions for subtraction, lhs: {} columns, {} rows, rhs: {} columns, {} rows",
                 self.width,
                 self.height,
                 rhs.width,
@@ -512,7 +518,7 @@ pub enum GaussianEliminationResult<T> {
 }
 
 impl<T> GaussianEliminationResult<T> {
-    /// Unwrap the solution single solution to a linear equation, panicking if there were zero or infinite solutions.
+    /// Unwrap the single solution to a linear equation, panicking if there were zero or infinite solutions.
     pub fn unwrap_single_solution(self) -> Vec<T> {
         match self {
             GaussianEliminationResult::InfiniteSolutions => {

@@ -1,8 +1,10 @@
+mod index;
 #[cfg(feature = "linalg")]
 pub mod linalg;
-
 pub(crate) mod utils;
 
+pub use index::GridIndex;
+use index::LinearIndexError;
 use std::collections::HashMap;
 use utils::*;
 
@@ -12,9 +14,9 @@ use utils::*;
 #[non_exhaustive]
 pub struct Grid<T> {
     /// The width of the grid (number of columns).
-    pub width: usize,
+    pub(crate) width: usize,
     /// The height of the grid (number of rows).
-    pub height: usize,
+    pub(crate) height: usize,
     /// The data of the grid, stored in a linear array of `width * height` length.
     data: Vec<T>,
 }
@@ -22,11 +24,11 @@ pub struct Grid<T> {
 impl<T> Grid<T> {
     /// Construct a new Grid.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `width * height != data.len()`
     /// * If one of (but not both) `width` and `height` is zero.
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// // construct a 2x3 (width x height) grid of chars
@@ -52,6 +54,16 @@ impl<T> Grid<T> {
             height,
             data,
         }
+    }
+
+    /// Returns the width (number of columns) of the `Grid`.
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    /// Returns the height (number of rows) of the `Grid`.
+    pub fn height(&self) -> usize {
+        self.height
     }
 
     pub fn subgrid(
@@ -89,7 +101,7 @@ impl<T> Grid<T> {
     }
 
     /// Returns a tuple containing the (width, height) of the grid.
-    /// # Example
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
@@ -102,7 +114,7 @@ impl<T> Grid<T> {
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
     /// Note: an empty Grid is not square (even though columns and rows is 0).
-    /// # Example
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 2, vec![1, 2, 3, 4]);
@@ -124,7 +136,7 @@ impl<T> Grid<T> {
     }
 
     /// Returns the area (number of columns * number of rows) of the grid.
-    /// # Example
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 3, vec![2, 4, 8, 16, 32, 64]);
@@ -137,7 +149,7 @@ impl<T> Grid<T> {
     /// Attempts to get a reference to the element at `idx`.
     ///
     /// Returns `None` if `idx` is out of bounds.
-    /// # Example
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 3, vec![2, 4, 8, 16, 32, 64]);
@@ -174,10 +186,10 @@ impl<T> Grid<T> {
 
     /// Return an iterator over the columns in the row with index `row`.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `row >= self.height`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(10, 10, (1..=100).collect());
@@ -192,10 +204,10 @@ impl<T> Grid<T> {
 
     /// Return an iterator over the rows in the column with index `column`.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `column >= self.width`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(10, 10, (1..=100).collect());
@@ -209,12 +221,12 @@ impl<T> Grid<T> {
 
     /// Insert a row at index `row`, shifting all other rows downward (row `n` becomes row `n+1` and so on).
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `row_contents.is_empty()`
     /// * If `row_contents.len() != self.width`
     /// * If `row >= self.height`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -261,7 +273,7 @@ impl<T> Grid<T> {
     ///
     /// Returns the old elements of the row.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `row >= self.height`
     /// * If `data.len() != self.width`
     pub fn replace_row(&mut self, row: usize, data: Vec<T>) -> Vec<T> {
@@ -280,10 +292,10 @@ impl<T> Grid<T> {
     ///
     /// Returns the row that was removed.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `row >= self.height`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -310,7 +322,7 @@ impl<T> Grid<T> {
 
     /// Swap two rows in the grid.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If either of the row indices are out of bounds.
     pub fn swap_rows(&mut self, row1: usize, row2: usize) {
         panic_if_row_out_of_bounds(self, row1);
@@ -327,12 +339,12 @@ impl<T> Grid<T> {
 
     /// Insert a column at index `column`, shifting all other columns to the right (column `n` becomes column `n+1` and so on).
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `column_contents.is_empty()`
     /// * If `column_contents.len() != self.height`
     /// * If `column >= self.width`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -380,7 +392,7 @@ impl<T> Grid<T> {
     ///
     /// Returns the old elements of the column.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `column >= self.width`
     /// * If `data.len() != self.height`
     pub fn replace_column(&mut self, column: usize, data: Vec<T>) -> Vec<T> {
@@ -398,7 +410,7 @@ impl<T> Grid<T> {
 
     /// Swap two columns in the grid.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If either of the column indices are out of bounds.
     pub fn swap_columns(&mut self, column1: usize, column2: usize) {
         panic_if_column_out_of_bounds(self, column1);
@@ -417,10 +429,10 @@ impl<T> Grid<T> {
     ///
     /// Returns the column that was removed.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `column >= self.width`
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -456,9 +468,11 @@ impl<T> Grid<T> {
     }
 
     /// Swap the values in two cells in the grid.
-    /// # Panics
+    ///
+    /// ## Panics
     /// * If either index is out of bounds.
-    /// # Example
+    ///
+    /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
@@ -484,7 +498,7 @@ impl<T> Grid<T> {
     ///
     /// Returns the old element of the cell.
     ///
-    /// # Panics
+    /// ## Panics
     /// * If `idx` is out of bounds.
     pub fn replace_cell<I>(&mut self, idx: I, elem: T) -> T
     where
@@ -497,7 +511,8 @@ impl<T> Grid<T> {
     }
 
     /// Rotate the grid counter-clockwise 90 degrees.
-    /// # Example
+    ///
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -534,7 +549,8 @@ impl<T> Grid<T> {
     }
 
     /// Rotate the grid clockwise 90 degrees.
-    /// # Example
+    ///
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -571,7 +587,8 @@ impl<T> Grid<T> {
     }
 
     /// Flip the grid horizontally, so that the first column becomes the last.
-    /// # Example
+    ///
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -606,7 +623,8 @@ impl<T> Grid<T> {
     }
 
     /// Flip the grid vertically, so that the first row becomes the last.
-    /// # Example
+    ///
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -642,7 +660,7 @@ impl<T> Grid<T> {
 
     /// Transpose the grid along the diagonal, so that cells at index (x, y) end up at index (y, x).
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 3, "abcdef".chars().collect());
@@ -716,13 +734,29 @@ impl<T> Grid<T> {
         GridIndex::to_linear_idx_in(self.width, idx)
     }
 
-    /// Return an iterator over the row indices in this grid.
-    fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
+    /// Return an iterator over the row indices in this grid. Allows you to write `for row in grid.rows()` instead of `for row in 0..grid.height()`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<u32> = Grid::new_default(3, 5);
+    /// let rows: Vec<usize> = grid.rows().collect();
+    /// assert_eq!(rows, vec![0, 1, 2, 3, 4]);
+    /// ```
+    pub fn rows(&self) -> impl DoubleEndedIterator<Item = usize> {
         0..self.height
     }
 
-    /// Return an iterator over the column indices in this grid.
-    fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
+    /// Return an iterator over the column indices in this grid. Allows you to write `for column in grid.columns()` instead of `for column in 0..grid.width()`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<u32> = Grid::new_default(2, 5);
+    /// let rows: Vec<usize> = grid.columns().collect();
+    /// assert_eq!(rows, vec![0, 1]);
+    /// ```
+    pub fn columns(&self) -> impl DoubleEndedIterator<Item = usize> {
         0..self.width
     }
 
@@ -751,7 +785,7 @@ where
 {
     /// Returns `true` if the grid contains some element equal to `value`.
     ///
-    /// # Example
+    /// ## Example
     /// ```
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(2, 2, "abcd".chars().collect());
@@ -829,66 +863,11 @@ where
     }
 }
 
-/// A struct used for indexing into a grid.
-#[derive(Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct GridIndex(usize, usize);
-
-impl GridIndex {
-    /// Construct a new GridIndex.
-    pub fn new(column: usize, row: usize) -> Self {
-        Self(column, row)
-    }
-
-    /// Get the column (x) index.
-    pub fn column(&self) -> usize {
-        self.0
-    }
-
-    /// Get the row (y) index.
-    pub fn row(&self) -> usize {
-        self.1
-    }
-
-    pub(crate) fn to_linear_idx_in(width: usize, idx: GridIndex) -> usize {
-        idx.row() * width + idx.column()
-    }
-}
-
-impl From<(usize, usize)> for GridIndex {
-    fn from((column, row): (usize, usize)) -> Self {
-        GridIndex::new(column, row)
-    }
-}
-
-impl std::fmt::Display for GridIndex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({},{})", self.column(), self.row())
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-enum LinearIndexError {
-    RowTooHigh,
-    ColumnTooHigh,
-}
-
-impl std::fmt::Display for LinearIndexError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = match self {
-            LinearIndexError::RowTooHigh => "row index is too high",
-            LinearIndexError::ColumnTooHigh => "column index is too high",
-        };
-
-        write!(f, "{}", output)
-    }
-}
-
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
-    use std::fmt::{Debug, Display};
-
     use super::*;
+    use std::fmt::{Debug, Display};
 
     fn example_grid_u32() -> Grid<u32> {
         // 1   2   3   4   5   6   7   8   9  10
