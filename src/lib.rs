@@ -1,3 +1,5 @@
+//! A simple and small library for representing two-dimensional grids.
+
 mod index;
 #[cfg(feature = "linalg")]
 pub mod linalg;
@@ -66,6 +68,26 @@ impl<T> Grid<T> {
         self.height
     }
 
+    /// Consumes the `Grid`, creating a new one from a subset of the original.
+    ///
+    /// ## Arguments
+    /// * `column_start` - Left bound for the subgrid.
+    /// * `row_start` - Upper bound for the subgrid.
+    /// * `width` - Number of columns in the subgrid.
+    /// * `height` - Number of rows in the subgrid.
+    ///
+    /// ## Panics
+    /// * If `width` or `height` (but not both) are 0. If both are 0, the resulting subgrid will be an empty (0 by 0) `Grid`.
+    /// * If `column_start` is out of bounds.
+    /// * If `row_start` is out of bounds.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let original: Grid<u32> = Grid::new(3, 3, (1..=9).collect());
+    /// let subgrid = original.subgrid(1, 0, 2, 2);
+    /// assert_eq!(subgrid, Grid::new(2, 2, vec![2, 3, 5, 6]));
+    /// ```
     pub fn subgrid(
         self,
         column_start: usize,
@@ -760,7 +782,7 @@ impl<T> Grid<T> {
         0..self.width
     }
 
-    /// Return an iterator over the cell indices in this grid.
+    /// Return an iterator over the cell indices in this grid. Iterates from top to bottom, left to right.
     fn indices(&self) -> impl DoubleEndedIterator<Item = GridIndex> {
         let height = self.height;
         let width = self.width;
@@ -869,17 +891,26 @@ mod tests {
     use super::*;
     use std::fmt::{Debug, Display};
 
+    /// 1   2   3   4   5   6   7   8   9   10
+    ///
+    /// 11  12  13  14  15  16  17  18  19  20
+    ///
+    /// 21  22  23  24  25  26  27  28  29  30
+    ///
+    /// 31  32  33  34  35  36  37  38  39  40
+    ///
+    /// 41  42  43  44  45  46  47  48  49  50
+    ///
+    /// 51  52  53  54  55  56  57  58  59  60
+    ///
+    /// 61  62  63  64  65  66  67  68  69  70
+    ///
+    /// 71  72  73  74  75  76  77  78  79  80
+    ///
+    /// 81  82  83  84  85  86  87  88  89  90
+    ///
+    /// 91  92  93  94  95  96  97  98  99 100
     fn example_grid_u32() -> Grid<u32> {
-        // 1   2   3   4   5   6   7   8   9  10
-        // 11  12  13  14  15  16  17  18  19  20
-        // 21  22  23  24  25  26  27  28  29  30
-        // 31  32  33  34  35  36  37  38  39  40
-        // 41  42  43  44  45  46  47  48  49  50
-        // 51  52  53  54  55  56  57  58  59  60
-        // 61  62  63  64  65  66  67  68  69  70
-        // 71  72  73  74  75  76  77  78  79  80
-        // 81  82  83  84  85  86  87  88  89  90
-        // 91  92  93  94  95  96  97  98  99 100
         let grid = Grid::new(10, 10, (1..=100).collect());
 
         println!("Grid<u32>: ");
@@ -1244,6 +1275,23 @@ mod tests {
         let old_value = grid.replace_cell((0, 1), 'x');
         assert_eq!(old_value, 'c');
         assert_grid_equal(&grid, &Grid::new(2, 3, "abxdef".chars().collect()));
+    }
+
+    #[test]
+    fn indices_test() {
+        let grid: Grid<u32> = Grid::new_default(3, 2);
+        let indices: Vec<GridIndex> = grid.indices().collect();
+        assert_eq!(
+            indices,
+            vec![
+                GridIndex::new(0, 0),
+                GridIndex::new(1, 0),
+                GridIndex::new(2, 0),
+                GridIndex::new(0, 1),
+                GridIndex::new(1, 1),
+                GridIndex::new(2, 1)
+            ]
+        );
     }
 
     #[test]
