@@ -1,7 +1,7 @@
 use crate::{utils::*, Grid};
 use num_traits::{Float, Num};
 use std::{
-    fmt::{Debug, Display},
+    fmt::Debug,
     ops::{Add, Mul, Sub},
 };
 
@@ -217,7 +217,7 @@ where
 
 impl<T> Grid<T>
 where
-    T: Copy + Float + Display + Debug,
+    T: Float,
 {
     /// Check this grid and another for equality, using an epsilon.
     ///

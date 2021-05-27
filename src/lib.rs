@@ -246,7 +246,7 @@ impl<T> Grid<T> {
     /// ## Panics
     /// * If `row_contents.is_empty()`
     /// * If `row_contents.len() != self.width`
-    /// * If `row >= self.height`
+    /// * If `row > self.height` (note that `row == self.height` is allowed, to add a row at the bottom of the `Grid`)
     ///
     /// ## Example
     /// ```
@@ -364,7 +364,7 @@ impl<T> Grid<T> {
     /// ## Panics
     /// * If `column_contents.is_empty()`
     /// * If `column_contents.len() != self.height`
-    /// * If `column >= self.width`
+    /// * If `column > self.width` (note that `column == self.width` is allowed, to add a column at the right of the `Grid`)
     ///
     /// ## Example
     /// ```
