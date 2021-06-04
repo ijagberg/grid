@@ -58,6 +58,28 @@ impl<T> Grid<T> {
         }
     }
 
+    /// Construct a `Grid` from another, by converting each element.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let u32_grid: Grid<u32> = Grid::new(2, 2, vec![1, 2, 3, 4]);
+    /// let f64_grid: Grid<f64> = Grid::from_grid(u32_grid);
+    /// assert_eq!(f64_grid, Grid::new(2, 2, vec![1.0, 2.0, 3.0, 4.0]));
+    /// ```
+    pub fn from_grid<U>(other: Grid<U>) -> Grid<T>
+    where
+        T: From<U>,
+    {
+        let (width, height) = other.dimensions();
+        let mut new_data = Vec::with_capacity(other.area());
+        for item in other.take_data() {
+            new_data.push(T::from(item));
+        }
+
+        Grid::new(width, height, new_data)
+    }
+
     /// Returns the width (number of columns) of the `Grid`.
     pub fn width(&self) -> usize {
         self.width
@@ -119,7 +141,7 @@ impl<T> Grid<T> {
             }
         }
 
-        Grid::new(column_end - column_start, row_end - row_start, data)
+        Grid::new(width, height, data)
     }
 
     /// Returns a tuple containing the (width, height) of the grid.
@@ -201,7 +223,7 @@ impl<T> Grid<T> {
 
     /// Return an iterator over the cells in the grid.
     ///
-    /// Goes from left->right, top->bottom.
+    /// Iterates from left to right (starting with row 0, then row 1 etc.).
     pub fn cell_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.data.iter()
     }
@@ -782,6 +804,32 @@ impl<T> Grid<T> {
         0..self.width
     }
 
+    /// Searches for an element in the `Grid` matching a predicate, returning its index.
+    ///
+    /// Iterates from left to right (looks through row 0 followed by row 1 etc.).
+    /// 
+    /// Returns the index of the first element that matches the predicate.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let grid = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
+    /// let position_of_4 = grid.position(|&e| e == 4);
+    /// assert_eq!(position_of_4, Some(GridIndex::new(1, 1)));
+    /// ```
+    pub fn position<P>(&self, predicate: P) -> Option<GridIndex>
+    where
+        P: Fn(&T) -> bool,
+    {
+        for idx in self.indices() {
+            let elem = &self[idx];
+            if predicate(elem) {
+                return Some(idx);
+            }
+        }
+        None
+    }
+
     /// Return an iterator over the cell indices in this grid. Iterates from top to bottom, left to right.
     fn indices(&self) -> impl DoubleEndedIterator<Item = GridIndex> {
         let height = self.height;
@@ -799,8 +847,18 @@ where
     T: Default,
 {
     /// Create a grid filled with default values.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<bool> = Grid::new_default(2, 2);
+    /// assert_eq!(grid, Grid::new(2, 2, vec![false, false, false, false]));
+    /// ```
     pub fn new_default(width: usize, height: usize) -> Grid<T> {
-        let data = (0..width * height).map(|_| T::default()).collect();
+        let mut data = Vec::with_capacity(width * height);
+        for _ in 0..data.capacity() {
+            data.push(T::default());
+        }
         Self::new(width, height, data)
     }
 }
