@@ -778,7 +778,7 @@ mod tests {
 
         let mut infinite_solutions = infinite_solutions_grid();
         let result = infinite_solutions.gaussian_elimination();
-        println!("{}", infinite_solutions);
+        println!("{}", infinite_solutions.to_pretty_string());
         assert!(
             matches!(result, GaussianEliminationResult::InfiniteSolutions),
             "actual: {:?}",
@@ -841,9 +841,9 @@ mod tests {
         assert_eq!(actual.width, expected.width);
         assert_eq!(actual.height, expected.height);
         println!("actual: ");
-        println!("{}", actual);
+        println!("{}", actual.to_pretty_string());
         println!("expected: ");
-        println!("{}", expected);
+        println!("{}", expected.to_pretty_string());
         for row in 0..actual.height {
             for column in 0..actual.width {
                 let actual = actual[(column, row)];

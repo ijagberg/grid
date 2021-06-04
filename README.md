@@ -10,7 +10,7 @@ use simple_grid::Grid;
 let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
 assert_eq!(grid.get((5, 2)).unwrap(), &26);
 
-println!("{}", grid);
+println!("{}", grid.to_pretty_string());
 // prints:
 //  1   2   3   4   5   6   7   8   9  10
 // 11  12  13  14  15  16  17  18  19  20

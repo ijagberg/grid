@@ -7,7 +7,7 @@ pub(crate) mod utils;
 
 pub use index::GridIndex;
 use index::LinearIndexError;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 use utils::*;
 
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
@@ -823,6 +823,55 @@ where
     }
 }
 
+impl<T> Grid<T>
+where
+    T: Display,
+{
+    /// Format this `Grid` as a string. This can look weird when the `Display` output of `T` has varying length.
+    ///
+    /// ## Example
+    /// ```rust
+    /// let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
+    /// assert_eq!(grid.get((5, 2)).unwrap(), &26);
+    ///
+    /// println!("{}", grid.to_pretty_string());
+    /// // prints:
+    /// //  1   2   3   4   5   6   7   8   9  10
+    /// // 11  12  13  14  15  16  17  18  19  20
+    /// // 21  22  23  24  25  26  27  28  29  30
+    /// // 31  32  33  34  35  36  37  38  39  40
+    /// // 41  42  43  44  45  46  47  48  49  50
+    /// // 51  52  53  54  55  56  57  58  59  60
+    /// // 61  62  63  64  65  66  67  68  69  70
+    /// // 71  72  73  74  75  76  77  78  79  80
+    /// // 81  82  83  84  85  86  87  88  89  90
+    /// // 91  92  93  94  95  96  97  98  99 100
+    /// ```
+    pub fn to_pretty_string(&self) -> String {
+        let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
+            let padded_string = |orig: &str| {
+                let mut padding: String = std::iter::repeat(" ")
+                    .take(max_length - orig.len())
+                    .collect();
+                padding.push_str(orig);
+                padding
+            };
+            self.rows()
+                .map(|r| {
+                    self.columns()
+                        .map(|c| padded_string(&self[(c, r)].to_string()))
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        } else {
+            "".to_string()
+        };
+        output
+    }
+}
+
 impl<T> IntoIterator for Grid<T> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -860,35 +909,6 @@ where
     }
 }
 
-impl<T> std::fmt::Display for Grid<T>
-where
-    T: std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
-            let padded_string = |orig: &str| {
-                let mut padding: String = std::iter::repeat(" ")
-                    .take(max_length - orig.len())
-                    .collect();
-                padding.push_str(orig);
-                padding
-            };
-            self.rows()
-                .map(|r| {
-                    self.columns()
-                        .map(|c| padded_string(&self[(c, r)].to_string()))
-                        .collect::<Vec<String>>()
-                        .join(" ")
-                })
-                .collect::<Vec<String>>()
-                .join("\n")
-        } else {
-            "".to_string()
-        };
-        write!(f, "{}", output)
-    }
-}
-
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
@@ -918,7 +938,7 @@ mod tests {
         let grid = Grid::new(10, 10, (1..=100).collect());
 
         println!("Grid<u32>: ");
-        println!("{}", grid);
+        println!("{}", grid.to_pretty_string());
 
         grid
     }
@@ -932,7 +952,7 @@ mod tests {
         let grid = Grid::new(2, 3, "abcdef".chars().collect());
 
         println!("Grid<char>: ");
-        println!("{}", grid);
+        println!("{}", grid.to_pretty_string());
 
         grid
     }
@@ -1313,9 +1333,9 @@ mod tests {
         T: Display + PartialEq + Debug,
     {
         println!("actual:");
-        println!("{}", actual);
+        println!("{}", actual.to_pretty_string());
         println!("expected:");
-        println!("{}", expected);
+        println!("{}", expected.to_pretty_string());
         assert_eq!(actual, expected);
     }
 }
