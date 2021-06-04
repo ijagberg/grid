@@ -584,6 +584,16 @@ mod tests {
         )
     }
 
+    fn single_solution_grid_2() -> Grid<f64> {
+        Grid::new(
+            4,
+            3,
+            vec![
+                5.0, 4.0, -1.0, 0.0, 0.0, 10.0, -3.0, 11.0, 0.0, 0.0, 1.0, 3.0,
+            ],
+        )
+    }
+
     /// `2x + 3y = 10`
     ///
     /// `2x + 3y = 12`
@@ -784,6 +794,11 @@ mod tests {
             "actual: {:?}",
             result
         );
+
+        let mut single_solution = single_solution_grid_2();
+        let result = single_solution.gaussian_elimination();
+        println!("{}", single_solution.to_pretty_string());
+        assert_eq!(result.unwrap_single_solution(), vec![-1.0, 2.0, 3.0]);
     }
 
     #[test]
