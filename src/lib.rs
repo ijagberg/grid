@@ -35,7 +35,7 @@ impl<T> Grid<T> {
     /// # use simple_grid::Grid;
     /// // construct a 2x3 (width x height) grid of chars
     /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
@@ -254,7 +254,7 @@ impl<T> Grid<T> {
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.insert_row(1, "xx".chars().collect());
     /// assert_eq!(grid, Grid::new(2, 3, "abxxcd".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // x x
@@ -323,7 +323,7 @@ impl<T> Grid<T> {
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.remove_row(1);
     /// assert_eq!(grid, Grid::new(2, 1, "ab".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// ```
@@ -372,7 +372,7 @@ impl<T> Grid<T> {
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.insert_column(1, "xx".chars().collect());
     /// assert_eq!(grid, Grid::new(3, 2, "axbcxd".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a x b
     /// // c x d
@@ -460,7 +460,7 @@ impl<T> Grid<T> {
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
     /// grid.remove_column(1);
     /// assert_eq!(grid, Grid::new(1, 2, "ac".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a
     /// // c
@@ -538,14 +538,14 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// grid.rotate_ccw();
     /// assert_eq!(grid, Grid::new(2, 2, "bdac".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // b d
     /// // a c
@@ -576,14 +576,14 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// grid.rotate_cw();
     /// assert_eq!(grid, Grid::new(2, 2, "cadb".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // c a
     /// // d b
@@ -614,14 +614,14 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// grid.flip_horizontally();
     /// assert_eq!(grid, Grid::new(2, 2, "badc".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // b a
     /// // d c
@@ -650,14 +650,14 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
     ///
     /// grid.flip_vertically();
     /// assert_eq!(grid, Grid::new(2, 2, "cdab".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // c d
     /// // a b
@@ -686,7 +686,7 @@ impl<T> Grid<T> {
     /// ```
     /// # use simple_grid::Grid;
     /// let mut grid = Grid::new(2, 3, "abcdef".chars().collect());
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a b
     /// // c d
@@ -694,7 +694,7 @@ impl<T> Grid<T> {
     ///
     /// grid.transpose();
     /// assert_eq!(grid, Grid::new(3, 2, "acebdf".chars().collect()));
-    /// println!("{}", grid);
+    /// println!("{}", grid.to_pretty_string());
     /// // prints:
     /// // a c e
     /// // b d f
@@ -831,6 +831,7 @@ where
     ///
     /// ## Example
     /// ```rust
+    /// # use simple_grid::Grid;
     /// let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
     /// assert_eq!(grid.get((5, 2)).unwrap(), &26);
     ///

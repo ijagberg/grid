@@ -16,7 +16,7 @@ where
     /// # use simple_grid::Grid;
     /// let mut g = Grid::identity(3);
     /// assert_eq!(g, Grid::new(3, 3, vec![1, 0, 0, 0, 1, 0, 0, 0, 1]));
-    /// println!("{}", g);
+    /// println!("{}", g.to_pretty_string());
     /// // prints
     /// // 1 0 0
     /// // 0 1 0
