@@ -18,8 +18,18 @@ impl GridIndex {
         self.1
     }
 
-    pub(crate) fn to_linear_idx_in(width: usize, idx: GridIndex) -> usize {
-        idx.row() * width + idx.column()
+    /// Convert this GridIndex into a linear index in a Grid of the given width.
+    ///
+    /// ## Panics
+    /// * If `self.column() >= width`
+    pub(crate) fn to_linear_idx_in(&self, width: usize) -> usize {
+        if self.column() >= width {
+            panic!(
+                "can't convert {:?} to a linear index in a Grid of width {}",
+                self, width
+            );
+        }
+        self.row() * width + self.column()
     }
 }
 
@@ -49,5 +59,17 @@ impl std::fmt::Display for LinearIndexError {
         };
 
         write!(f, "{}", output)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_linear_idx_in_test() {
+        let index = GridIndex::new(2, 3);
+        let linear = index.to_linear_idx_in(7);
+        assert_eq!(linear, 23);
     }
 }

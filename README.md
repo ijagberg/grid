@@ -4,7 +4,7 @@ I noticed I kept reimplementing the same 2d-grid structure in many of my persona
 
 # Example usage
 ## Creating a grid and accessing its cells:
-```
+```rust
 use simple_grid::Grid;
 
 let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
@@ -25,7 +25,7 @@ println!("{}", grid);
 ```
 
 ## Iterating over cells:
-```
+```rust
 let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
 
 let elements_in_row_3: Vec<u32> = grid.row_iter(3).copied().collect();
@@ -42,7 +42,7 @@ assert_eq!(
 ```
 
 ## Modifying contents
-```
+```rust
 let mut grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
 
 // get a mutable reference to a cell
@@ -58,4 +58,12 @@ assert_eq!(grid.get((5, 5)).unwrap(), &1001);
 This is only available if the `serde` feature is enabled.
 
 ## Linear algebra
-The `linalg` feature includes some methods that are useful for linear algebra. 
+The `linalg` feature includes some methods that are useful for linear algebra:
+
+### Matrix operations
+```rust
+let grid1 = Grid::new(2, 2, vec![1, 2, 3, 4]);
+let grid2 = Grid::new(2, 2, vec![1, 0, 1, 0]);
+let sum = grid1 + grid2;
+assert_eq!(sum, Grid::new(2, 2, vec![2, 2, 4, 4]));
+```

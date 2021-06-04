@@ -114,7 +114,7 @@ impl<T> Grid<T> {
 
         for idx in indices.rev() {
             if !is_within_bounds(idx) {
-                let linear_idx = GridIndex::to_linear_idx_in(self.width, idx);
+                let linear_idx = idx.to_linear_idx_in(self.width);
                 data.remove(linear_idx);
             }
         }
@@ -282,7 +282,7 @@ impl<T> Grid<T> {
             );
         }
 
-        let start_idx = GridIndex::to_linear_idx_in(self.width, GridIndex::new(0, row));
+        let start_idx = GridIndex::new(0, row).to_linear_idx_in(self.width);
 
         for (elem, idx) in row_contents.into_iter().zip(start_idx..) {
             self.data.insert(idx, elem);
@@ -400,7 +400,7 @@ impl<T> Grid<T> {
         }
 
         let indices: Vec<usize> = (0..column_contents.len())
-            .map(|row| GridIndex::to_linear_idx_in(self.width + 1, GridIndex::new(column, row)))
+            .map(|row| GridIndex::new(column, row).to_linear_idx_in(self.width + 1))
             .collect();
 
         for (elem, idx) in column_contents.into_iter().zip(indices.into_iter()) {
@@ -746,14 +746,14 @@ impl<T> Grid<T> {
         } else if idx.column() >= self.width {
             Err(LinearIndexError::ColumnTooHigh)
         } else {
-            Ok(GridIndex::to_linear_idx_in(self.width, idx))
+            Ok(idx.to_linear_idx_in(self.width))
         }
     }
 
     /// Same as `linear_idx`, but panics when `idx` is out of bounds.
     fn linear_idx_unchecked(&self, idx: GridIndex) -> usize {
         panic_if_index_out_of_bounds(self, idx);
-        GridIndex::to_linear_idx_in(self.width, idx)
+        idx.to_linear_idx_in(self.width)
     }
 
     /// Return an iterator over the row indices in this grid. Allows you to write `for row in grid.rows()` instead of `for row in 0..grid.height()`.
@@ -787,6 +787,10 @@ impl<T> Grid<T> {
         let height = self.height;
         let width = self.width;
         (0..height).flat_map(move |row| (0..width).map(move |column| GridIndex::new(column, row)))
+    }
+
+    pub(crate) fn take_data(self) -> Vec<T> {
+        self.data
     }
 }
 

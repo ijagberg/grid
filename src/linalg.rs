@@ -1,9 +1,6 @@
 use crate::{utils::*, Grid};
 use num_traits::{Float, Num};
-use std::{
-    fmt::Debug,
-    ops::{Add, Mul, Sub},
-};
+use std::fmt::Debug;
 
 impl<T> Grid<T>
 where
@@ -411,98 +408,136 @@ where
     }
 }
 
-impl<T> Mul for Grid<T>
-where
-    T: Mul<T, Output = T> + Add<T, Output = T> + Copy,
-{
-    type Output = Grid<T>;
+mod mul {
+    use super::*;
+    use std::{iter::Sum, ops::Mul};
 
-    fn mul(self, rhs: Grid<T>) -> Self::Output {
-        if self.width != rhs.height {
+    impl<TLeft, TRight> Mul<Grid<TRight>> for Grid<TLeft>
+    where
+        TLeft: Clone,
+        TRight: Clone,
+        TLeft: Mul<TRight>,
+        <TLeft as Mul<TRight>>::Output: Sum,
+    {
+        type Output = Grid<<TLeft as Mul<TRight>>::Output>;
+
+        fn mul(self, rhs: Grid<TRight>) -> Self::Output {
+            panic_if_dimensions_are_invalid_for_multiplication(&self, &rhs);
+
+            let mut product_data = Vec::with_capacity(self.height() * rhs.width());
+            for row in self.rows() {
+                for column in rhs.columns() {
+                    let sum_product: <TLeft as Mul<TRight>>::Output = self
+                        .row_iter(row)
+                        .cloned()
+                        .zip(rhs.column_iter(column).cloned())
+                        .map(|(l, r)| l * r)
+                        .sum();
+                    product_data.push(sum_product);
+                }
+            }
+
+            Grid::new(rhs.width(), self.height(), product_data)
+        }
+    }
+
+    impl<T> Mul<T> for Grid<T>
+    where
+        T: Num + Mul<T> + Copy,
+    {
+        type Output = Grid<T>;
+
+        fn mul(mut self, rhs: T) -> Self::Output {
+            for idx in self.indices() {
+                self[idx] = self[idx] * rhs;
+            }
+            self
+        }
+    }
+
+    fn panic_if_dimensions_are_invalid_for_multiplication<T, U>(lhs: &Grid<T>, rhs: &Grid<U>) {
+        if lhs.width() != rhs.height() {
             panic!(
                 "invalid matrix dimensions for multiplication, lhs: {} columns, rhs: {} rows",
-                self.width, rhs.height
+                lhs.width(),
+                rhs.height()
             );
         }
+    }
+}
 
-        let mut product_vec: Vec<T> = Vec::with_capacity(self.height * rhs.width);
+mod add {
+    use super::*;
+    use std::ops::Add;
 
-        for lhs_row in self.rows() {
-            for rhs_column in rhs.columns() {
-                let mut sum = None;
-                for (&l, &r) in self.row_iter(lhs_row).zip(rhs.column_iter(rhs_column)) {
-                    match sum {
-                        Some(s) => sum = Some(s + (l * r)),
-                        None => sum = Some(l * r),
-                    }
-                }
-                product_vec.push(sum.unwrap());
+    impl<TLeft, TRight, TOutput> Add<Grid<TRight>> for Grid<TLeft>
+    where
+        TLeft: Add<TRight, Output = TOutput>,
+    {
+        type Output = Grid<TOutput>;
+
+        fn add(self, rhs: Grid<TRight>) -> Self::Output {
+            panic_if_dimensions_are_invalid_for_addition(&self, &rhs);
+
+            let (data_len, width, height) = (self.area(), self.width(), self.height());
+            let lhs_data = self.take_data();
+            let rhs_data = rhs.take_data();
+            let mut sum_data = Vec::with_capacity(data_len);
+
+            for (l, r) in lhs_data.into_iter().zip(rhs_data.into_iter()) {
+                sum_data.push(l + r);
             }
+
+            Grid::new(width, height, sum_data)
         }
-
-        Grid::new(rhs.width, self.height, product_vec)
     }
-}
 
-impl<T> Mul<T> for Grid<T>
-where
-    T: Num + Mul<T> + Copy,
-{
-    type Output = Grid<T>;
-
-    fn mul(mut self, rhs: T) -> Self::Output {
-        for idx in self.indices() {
-            self[idx] = self[idx] * rhs;
-        }
-        self
-    }
-}
-
-impl<'a, T> Add<Grid<T>> for Grid<T>
-where
-    T: Add<T, Output = T> + Copy,
-{
-    type Output = Grid<T>;
-
-    fn add(self, rhs: Grid<T>) -> Self::Output {
-        if self.dimensions() != rhs.dimensions() {
+    fn panic_if_dimensions_are_invalid_for_addition<T, U>(lhs: &Grid<T>, rhs: &Grid<U>) {
+        if lhs.dimensions() != rhs.dimensions() {
             panic!("invalid matrix dimensions for addition, lhs: {} columns, {} rows, rhs: {} columns, {} rows", 
-                self.width,
-                self.height,
-                rhs.width,
-                rhs.height);
+            lhs.width,
+            lhs.height,
+            rhs.width,
+            rhs.height);
         }
-
-        let mut sum_vec = Vec::with_capacity(self.area());
-
-        for idx in self.indices() {
-            sum_vec.push(self[idx] + rhs[idx]);
-        }
-        Grid::new(self.width, self.height, sum_vec)
     }
 }
 
-impl<'a, T> Sub<Grid<T>> for Grid<T>
-where
-    T: Sub<T, Output = T> + Copy,
-{
-    type Output = Grid<T>;
+mod sub {
+    use super::*;
+    use std::ops::Sub;
 
-    fn sub(self, rhs: Grid<T>) -> Self::Output {
-        if self.dimensions() != rhs.dimensions() {
-            panic!("invalid matrix dimensions for subtraction, lhs: {} columns, {} rows, rhs: {} columns, {} rows",
-                self.width,
-                self.height,
-                rhs.width,
-                rhs.height);
+    impl<TLeft, TRight, TOutput> Sub<Grid<TRight>> for Grid<TLeft>
+    where
+        TLeft: Sub<TRight, Output = TOutput>,
+    {
+        type Output = Grid<TOutput>;
+
+        fn sub(self, rhs: Grid<TRight>) -> Self::Output {
+            panic_if_dimensions_are_invalid_for_subtraction(&self, &rhs);
+
+            let (data_len, width, height) = (self.area(), self.width(), self.height());
+            let mut lhs_data = self.take_data();
+            let mut rhs_data = rhs.take_data();
+            let mut diff_data = Vec::with_capacity(data_len);
+
+            while let (Some(l), Some(r)) = (lhs_data.pop(), rhs_data.pop()) {
+                diff_data.push(l - r);
+            }
+            diff_data.reverse();
+
+            Grid::new(width, height, diff_data)
         }
+    }
 
-        let mut sum_vec = Vec::with_capacity(self.area());
-
-        for idx in self.indices() {
-            sum_vec.push(self[idx] - rhs[idx]);
+    fn panic_if_dimensions_are_invalid_for_subtraction<T, U>(lhs: &Grid<T>, rhs: &Grid<U>) {
+        if lhs.dimensions() != rhs.dimensions() {
+            panic!("invalid matrix dimensions for subtraction, lhs: {} columns, {} rows, rhs: {} columns, {} rows", 
+            lhs.width,
+            lhs.height,
+            rhs.width,
+            rhs.height);
         }
-        Grid::new(self.width, self.height, sum_vec)
     }
 }
 
@@ -608,6 +643,30 @@ mod tests {
                 ]
             )
         );
+    }
+
+    #[test]
+    fn multiply_matrix_by_matrix_test_2() {
+        use std::ops::Mul;
+        #[derive(Clone)]
+        struct A(u32);
+        #[derive(Clone)]
+        struct B(u32);
+
+        impl Mul<B> for A {
+            type Output = u32;
+
+            fn mul(self, rhs: B) -> Self::Output {
+                self.0 * rhs.0
+            }
+        }
+
+        let a = Grid::new(2, 2, vec![A(1), A(2), A(3), A(4)]);
+        let b = Grid::new(3, 2, vec![B(1), B(2), B(3), B(4), B(5), B(6)]);
+
+        let product: Grid<u32> = a * b;
+
+        assert_eq!(product, Grid::new(3, 2, vec![9, 12, 15, 19, 26, 33]));
     }
 
     #[test]
@@ -761,6 +820,14 @@ mod tests {
             ) * (1.0 / 8.0)),
             0.00001,
         );
+    }
+
+    #[test]
+    fn readme_test() {
+        let grid1 = Grid::new(2, 2, vec![1, 2, 3, 4]);
+        let grid2 = Grid::new(2, 2, vec![1, 0, 1, 0]);
+        let sum = grid1 + grid2;
+        assert_eq!(sum, Grid::new(2, 2, vec![2, 2, 4, 4]));
     }
 
     fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>
