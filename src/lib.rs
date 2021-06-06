@@ -313,6 +313,24 @@ impl<T> Grid<T> {
         self.height += 1;
     }
 
+    /// Add a row to the bottom of the `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// grid.push_row(vec!['x', 'x']);
+    /// assert_eq!(grid, Grid::new(2, 3, "abcdxx".chars().collect()));
+    /// println!("{}", grid.to_pretty_string());
+    /// // prints
+    /// // a b
+    /// // c d
+    /// // x x
+    /// ```
+    pub fn push_row(&mut self, row_contents: Vec<T>) {
+        self.insert_row(self.height(), row_contents);
+    }
+
     /// Replace the contents in a row.
     ///
     /// Returns the old elements of the row.
@@ -362,6 +380,26 @@ impl<T> Grid<T> {
             self.width = 0;
         }
         r
+    }
+
+    /// Remove the bottom row, returning it (if it exists).
+    ///
+    /// Returns `None` if the height of the `Grid` is zero.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// let bottom_row = grid.pop_row();
+    /// assert_eq!(bottom_row, Some(vec!['c', 'd']));
+    /// assert_eq!(grid, Grid::new(2, 1, "ab".chars().collect()));
+    /// ```
+    pub fn pop_row(&mut self) -> Option<Vec<T>> {
+        if self.height() == 0 {
+            None
+        } else {
+            Some(self.remove_row(self.height() - 1))
+        }
     }
 
     /// Swap two rows in the grid.
@@ -430,6 +468,23 @@ impl<T> Grid<T> {
         }
 
         self.width += 1;
+    }
+
+    /// Add a column to the right of the `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// grid.push_column(vec!['x', 'x']);
+    /// assert_eq!(grid, Grid::new(3, 2, "abxcdx".chars().collect()));
+    /// println!("{}", grid.to_pretty_string());
+    /// // prints
+    /// // a b x
+    /// // c d x
+    /// ```
+    pub fn push_column(&mut self, column_contents: Vec<T>) {
+        self.insert_column(self.width(), column_contents);
     }
 
     /// Replace the contents in a column.
@@ -509,6 +564,26 @@ impl<T> Grid<T> {
         }
 
         c
+    }
+
+    /// Remove the rightmost column, returning it (if it exists).
+    ///
+    /// Returns `None` if the width of the `Grid` is zero.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// let rightmost_column = grid.pop_column();
+    /// assert_eq!(rightmost_column, Some(vec!['b', 'd']));
+    /// assert_eq!(grid, Grid::new(1, 2, "ac".chars().collect()));
+    /// ```
+    pub fn pop_column(&mut self) -> Option<Vec<T>> {
+        if self.width() == 0 {
+            None
+        } else {
+            Some(self.remove_column(self.width() - 1))
+        }
     }
 
     /// Swap the values in two cells in the grid.
@@ -807,7 +882,7 @@ impl<T> Grid<T> {
     /// Searches for an element in the `Grid` matching a predicate, returning its index.
     ///
     /// Iterates from left to right (looks through row 0 followed by row 1 etc.).
-    /// 
+    ///
     /// Returns the index of the first element that matches the predicate.
     ///
     /// ## Example

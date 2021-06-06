@@ -60,10 +60,40 @@ This is only available if the `serde` feature is enabled.
 ## Linear algebra
 The `linalg` feature includes some methods that are useful for linear algebra:
 
-### Matrix operations
+### Arithmetic operations:
 ```rust
 let grid1 = Grid::new(2, 2, vec![1, 2, 3, 4]);
 let grid2 = Grid::new(2, 2, vec![1, 0, 1, 0]);
 let sum = grid1 + grid2;
 assert_eq!(sum, Grid::new(2, 2, vec![2, 2, 4, 4]));
 ```
+
+### Inverse, transpose etc.:
+```rust
+let grid = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
+let inverse = grid.inverse().unwrap();
+assert_eq!(
+    &inverse,
+    &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
+);
+```
+### Gaussian elimination
+To solve the following system:
+
+`2x + y - z = 8`
+
+`-3x - y + 2z = -11`
+
+`-2x + y + 2z = -3`
+```rust
+let mut grid = Grid::new(
+    4,
+    3,
+    // the equation system represented as a Grid where the rightmost column is the right side of the equal signs
+    vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.], 
+);
+let solution = grid.gaussian_elimination();
+assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.]))
+```
+Giving the solution 
+`x = 2, y = 3, z = -1`

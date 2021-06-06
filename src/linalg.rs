@@ -259,8 +259,8 @@ where
     /// let inverse = invertible.inverse().unwrap();
     /// assert!(inverse.equal_by_epsilon(&Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]), 1e-6));
     /// ```
-    pub fn inverse(&mut self) -> Option<Grid<T>> {
-        panic_if_not_square(self);
+    pub fn inverse(mut self) -> Option<Grid<T>> {
+        panic_if_not_square(&self);
         if self.determinant() == T::zero() {
             return None;
         }
@@ -804,9 +804,8 @@ mod tests {
     #[test]
     fn inverse_test() {
         let original = float_grid(3, 3, vec![3, 0, 2, 2, 0, -2, 0, 1, 1]);
-        let mut invertible = original.clone();
+        let invertible = original.clone();
         let inverse = invertible.inverse().unwrap();
-        compare_float_grids(&invertible, &Grid::identity(3), 0.0000001);
         compare_float_grids(
             &inverse,
             &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
@@ -821,9 +820,8 @@ mod tests {
             4,
             vec![5, -5, 5, 6, 2, 1, 1, 2, -1, -1, 0, 1, 5, 1, 2, 1],
         );
-        let mut invertible = original.clone();
+        let invertible = original.clone();
         let inverse = invertible.inverse().unwrap();
-        compare_float_grids(&invertible, &Grid::identity(4), 0.00000000001);
         compare_float_grids(
             &inverse,
             &(float_grid(
@@ -839,10 +837,36 @@ mod tests {
 
     #[test]
     fn readme_test() {
+        // mathematical ops
         let grid1 = Grid::new(2, 2, vec![1, 2, 3, 4]);
         let grid2 = Grid::new(2, 2, vec![1, 0, 1, 0]);
         let sum = grid1 + grid2;
         assert_eq!(sum, Grid::new(2, 2, vec![2, 2, 4, 4]));
+
+        // inverse, transpose etc.
+        let grid = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
+        let inverse = grid.inverse().unwrap();
+        assert_eq!(
+            &inverse,
+            &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
+        );
+
+        // gaussian elimination
+        // ## Example
+        // To solve the following system:
+        //
+        // `2x + y - z = 8`
+        //
+        // `-3x - y + 2z = -11`
+        //
+        // `-2x + y + 2z = -3`
+        let mut grid = Grid::new(
+            4,
+            3,
+            vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.],
+        );
+        let solution = grid.gaussian_elimination();
+        assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
     }
 
     fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>
