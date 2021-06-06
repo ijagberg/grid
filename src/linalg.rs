@@ -846,10 +846,13 @@ mod tests {
         // inverse, transpose etc.
         let grid = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
         let inverse = grid.inverse().unwrap();
-        assert_eq!(
-            &inverse,
-            &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
-        );
+        for (actual, expected) in inverse
+            .cell_iter()
+            .zip(Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]).cell_iter())
+        {
+            let diff = actual - expected;
+            assert!(diff < 0.000001); 
+        }
 
         // gaussian elimination
         // ## Example

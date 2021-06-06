@@ -72,10 +72,13 @@ assert_eq!(sum, Grid::new(2, 2, vec![2, 2, 4, 4]));
 ```rust
 let grid = Grid::new(3, 3, vec![3., 0., 2., 2., 0., -2., 0., 1., 1.]);
 let inverse = grid.inverse().unwrap();
-assert_eq!(
-    &inverse,
-    &Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]),
-);
+for (actual, expected) in inverse
+    .cell_iter()
+    .zip(Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]).cell_iter())
+{
+    let diff = actual - expected;
+    assert!(diff < 0.000001); 
+}
 ```
 ### Gaussian elimination
 To solve the following system:
@@ -86,10 +89,10 @@ To solve the following system:
 
 `-2x + y + 2z = -3`
 ```rust
+// the equation system represented as a Grid where the rightmost column is the right side of the equal signs
 let mut grid = Grid::new(
     4,
     3,
-    // the equation system represented as a Grid where the rightmost column is the right side of the equal signs
     vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.], 
 );
 let solution = grid.gaussian_elimination();
