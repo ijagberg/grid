@@ -90,6 +90,9 @@ where
     }
 
     /// Returns `true` if the matrix is symmetric (i.e. if its equal to its transpose).
+    ///
+    /// ## Notes
+    /// * A non-square matrix is never symmetric
     pub fn is_symmetric(&self) -> bool {
         if !self.is_square() {
             false
@@ -109,10 +112,8 @@ where
     /// ## Panics
     /// * If `self` is not a square grid.
     pub fn trace(&self) -> T {
-        panic_if_not_square(self);
-
         let mut sum = T::zero();
-        for n in self.columns() {
+        for n in 0..self.square_size() {
             sum = sum + self[(n, n)];
         }
 

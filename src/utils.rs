@@ -70,20 +70,18 @@ pub(crate) fn panic_if_width_xor_height_is_zero(width: usize, height: usize) {
     }
 }
 
-#[cfg(feature = "linalg")]
 #[inline(always)]
 pub(crate) fn panic_if_empty<T>(grid: &Grid<T>) {
     if grid.is_empty() {
-        panic!("matrix is empty");
+        panic!("grid is empty");
     }
 }
 
-#[cfg(feature = "linalg")]
 #[inline(always)]
 pub(crate) fn panic_if_not_square<T>(grid: &Grid<T>) {
     if !grid.is_square() {
         panic!(
-            "matrix is not square: has {} columns, {} rows",
+            "grid is not square: has {} columns, {} rows",
             grid.width, grid.height
         );
     }

@@ -170,6 +170,13 @@ impl<T> Grid<T> {
         !self.is_empty() && self.width == self.height
     }
 
+    /// Returns the size of this Grid, panicking if the Grid is not square.
+    fn square_size(&self) -> usize {
+        panic_if_not_square(self);
+
+        self.width()
+    }
+
     fn is_empty(&self) -> bool {
         let ans = self.width == 0 || self.height == 0;
         if ans {
