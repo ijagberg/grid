@@ -24,7 +24,7 @@ where
     /// ```
     pub fn identity(size: usize) -> Self {
         if size == 0 {
-            panic!();
+            panic!("can't create an identity matrix of size 0");
         }
 
         let mut data = Vec::new();
@@ -851,7 +851,7 @@ mod tests {
             .zip(Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]).cell_iter())
         {
             let diff = actual - expected;
-            assert!(diff < 0.000001); 
+            assert!(diff < 0.000001);
         }
 
         // gaussian elimination
