@@ -913,7 +913,15 @@ impl<T> Grid<T> {
     }
 
     /// Return an iterator over the cell indices in this grid. Iterates from top to bottom, left to right.
-    fn indices(&self) -> impl DoubleEndedIterator<Item = GridIndex> {
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_three: Grid<u32> = Grid::new(2, 3, vec![1, 2, 3, 4, 5, 6]);
+    /// let indices: Vec<GridIndex> = two_by_three.indices().collect();
+    /// assert_eq!(indices, vec![GridIndex::new(0, 0), GridIndex::new(1, 0), GridIndex::new(0, 1), GridIndex::new(1, 1), GridIndex::new(0, 2), GridIndex::new(1, 2)]);
+    /// ```
+    pub fn indices(&self) -> impl DoubleEndedIterator<Item = GridIndex> {
         let height = self.height;
         let width = self.width;
         (0..height).flat_map(move |row| (0..width).map(move |column| GridIndex::new(column, row)))
