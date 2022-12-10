@@ -22,7 +22,7 @@ impl GridIndex {
     ///
     /// ## Panics
     /// * If `self.column() >= width`
-    pub(crate) fn to_linear_idx_in(&self, width: usize) -> usize {
+    pub(crate) fn to_linear_idx_in(self, width: usize) -> usize {
         if self.column() >= width {
             panic!(
                 "can't convert {:?} to a linear index in a Grid of width {}",

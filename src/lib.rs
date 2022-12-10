@@ -230,7 +230,16 @@ impl<T> Grid<T> {
 
     /// Return an iterator over the cells in the grid.
     ///
-    /// Iterates from left to right (starting with row 0, then row 1 etc.).
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
+    /// // grid looks like
+    /// // a b
+    /// // c d
+    /// // e f
+    /// assert_eq!(grid.cell_iter().copied().collect::<Vec<char>>(), vec!['a', 'b', 'c', 'd', 'e', 'f']);
+    /// ```
     pub fn cell_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.data.iter()
     }
@@ -999,9 +1008,7 @@ where
     pub fn to_pretty_string(&self) -> String {
         let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
             let padded_string = |orig: &str| {
-                let mut padding: String = std::iter::repeat(" ")
-                    .take(max_length - orig.len())
-                    .collect();
+                let mut padding = " ".repeat(max_length - orig.len());
                 padding.push_str(orig);
                 padding
             };
