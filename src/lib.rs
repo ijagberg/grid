@@ -668,7 +668,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::new();
+        let mut target_index = HashMap::with_capacity(self.area());
         let mut current_target = 0;
         for column in self.columns().rev() {
             for row in self.rows() {
@@ -706,7 +706,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::new();
+        let mut target_index = HashMap::with_capacity(self.area());
         let mut current_target = 0;
         for column in self.columns() {
             for row in self.rows().rev() {
@@ -744,7 +744,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::new();
+        let mut target_index = HashMap::with_capacity(self.area());
         let mut current_target = 0;
         for row in self.rows() {
             for column in self.columns().rev() {
@@ -780,7 +780,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::new();
+        let mut target_index = HashMap::with_capacity(self.area());
         let mut current_target = 0;
         for row in self.rows().rev() {
             for column in self.columns() {
@@ -817,7 +817,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::new();
+        let mut target_index = HashMap::with_capacity(self.area());
         let mut current_target = 0;
         for column in self.columns() {
             for row in self.rows() {
@@ -835,8 +835,7 @@ impl<T> Grid<T> {
 
     /// Transforms the Grid, moving the contents of cells to new indices based on a hashmap.
     fn transform(&mut self, mut target_index: HashMap<usize, usize>) {
-        while !target_index.is_empty() {
-            let current = *target_index.keys().next().unwrap();
+        while let Some(&current) = target_index.keys().next() {
             let mut target = target_index.remove(&current).unwrap();
 
             loop {
