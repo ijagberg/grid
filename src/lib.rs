@@ -996,6 +996,23 @@ impl<T> Grid<T> {
         neighbors
     }
 
+    /// Returns a `Vec` containing the contents of the cardinal neighbors of the cell at `idx`.
+    ///
+    /// Returns the neighbors in clockwise appearance: `[up, right, down, left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.cardinal_neighbor_cells_of((1, 1)), vec![&'b', &'c']);
+    /// ```
+    pub fn cardinal_neighbor_cells_of<I>(&self, idx: I) -> Vec<&T> where I: Into<GridIndex> {
+        let idx: GridIndex = idx.into();
+        self.cardinal_neighbor_indices_of(idx).into_iter().map(|i| &self[i]).collect()
+    }
+
     /// Returns the `GridIndex` above `idx`, if it exists.
     ///
     /// ## Example
