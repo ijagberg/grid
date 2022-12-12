@@ -1008,9 +1008,15 @@ impl<T> Grid<T> {
     /// // c d
     /// assert_eq!(two_by_two.cardinal_neighbor_cells_of((1, 1)), vec![&'b', &'c']);
     /// ```
-    pub fn cardinal_neighbor_cells_of<I>(&self, idx: I) -> Vec<&T> where I: Into<GridIndex> {
+    pub fn cardinal_neighbor_cells_of<I>(&self, idx: I) -> Vec<&T>
+    where
+        I: Into<GridIndex>,
+    {
         let idx: GridIndex = idx.into();
-        self.cardinal_neighbor_indices_of(idx).into_iter().map(|i| &self[i]).collect()
+        self.cardinal_neighbor_indices_of(idx)
+            .into_iter()
+            .map(|i| &self[i])
+            .collect()
     }
 
     /// Returns the `GridIndex` above `idx`, if it exists.

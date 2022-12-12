@@ -89,6 +89,38 @@ impl GridIndex {
         }
     }
 
+    /// Get the `GridIndex` above and to the left, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let column_5_row_4 = GridIndex::new(5, 4);
+    /// assert_eq!(column_5_row_4.up_left(), Some(GridIndex::new(4, 3)));
+    /// ```
+    pub fn up_left(&self) -> Option<Self> {
+        self.up().map(|up| up.left()).flatten()
+    }
+
+    pub fn up_right(&self) -> Option<Self> {
+        if self.row() > 0 {
+            Some(Self::new(self.column() + 1, self.row() - 1))
+        } else {
+            None
+        }
+    }
+
+    pub fn down_right(&self) -> Self {
+        Self::new(self.column() + 1, self.row() + 1)
+    }
+
+    pub fn down_left(&self) -> Option<Self> {
+        if self.column() > 0 {
+            Some(Self::new(self.column() - 1, self.row() + 1))
+        } else {
+            None
+        }
+    }
+
     /// Convert this GridIndex into a linear index in a Grid of the given width.
     ///
     /// ## Panics
