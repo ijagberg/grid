@@ -935,6 +935,18 @@ impl<T> Grid<T> {
         (0..height).flat_map(move |row| (0..width).map(move |column| GridIndex::new(column, row)))
     }
 
+    /// Return an iterator over the cells in the grid, together with their indices.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(grid.cells_with_indices_iter().collect::<Vec<_>>(), vec![(GridIndex::new(0, 0), &'a'), (GridIndex::new(1, 0), &'b'), (GridIndex::new(0, 1), &'c'), (GridIndex::new(1, 1), &'d')]);
+    /// ```
+    pub fn cells_with_indices_iter(&self) -> impl DoubleEndedIterator<Item = (GridIndex, &T)> {
+        self.indices().map(move |idx| (idx, &self[idx]))
+    }
+
     pub(crate) fn take_data(self) -> Vec<T> {
         self.data
     }
