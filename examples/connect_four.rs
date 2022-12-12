@@ -35,14 +35,14 @@ fn main() {
 
 fn print_board(board: &Board) {
     for row in board.rows() {
-            println!(
-                "{}",
-                board
-                    .row_iter(row)
-                    .map(|c| format!("{}", c))
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            );
+        println!(
+            "{}",
+            board
+                .row_iter(row)
+                .map(|c| format!("{}", c))
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
     }
 }
 

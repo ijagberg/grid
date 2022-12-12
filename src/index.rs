@@ -18,6 +18,77 @@ impl GridIndex {
         self.1
     }
 
+    /// Get the `GridIndex` above, if it exists (no `GridIndex` exists above row 0).
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let row_5 = GridIndex::new(17, 5);
+    /// assert_eq!(row_5.up(), Some(GridIndex::new(17, 4)));
+    /// let row_0 = GridIndex::new(38, 0);
+    /// assert_eq!(row_0.up(), None);
+    /// ```
+    pub fn up(&self) -> Option<Self> {
+        if self.row() > 0 {
+            Some(Self::new(self.column(), self.row() - 1))
+        } else {
+            None
+        }
+    }
+
+    /// Get the `GridIndex` to the right.
+    ///
+    /// ## Notes
+    /// Unlike `up` and `left`, this method does not return an `Option<GridIndex>`, since there is
+    /// always a higher column value. It's unlikely that you will ever have a `Grid` with
+    /// `usize::MAX` rows, but if you did, this method would overflow.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let column_17 = GridIndex::new(17, 11);
+    /// assert_eq!(column_17.right(), GridIndex::new(18, 11));
+    /// ```
+    pub fn right(&self) -> Self {
+        Self::new(self.column() + 1, self.row())
+    }
+
+    /// Get the `GridIndex` below.
+    ///
+    /// ## Notes
+    /// Unlike `up` and `left`, this method does not return an `Option<GridIndex>`, since there is
+    /// always a higher row value. It's unlikely that you will ever have a `Grid` with `usize::MAX`
+    /// rows, but if you did, this method would overflow.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let row_15 = GridIndex::new(3, 15);
+    /// assert_eq!(row_15.down(), GridIndex::new(3, 16));
+    /// ```
+    pub fn down(&self) -> Self {
+        Self::new(self.column(), self.row() + 1)
+    }
+
+    /// Get the `GridIndex` to the left, if it exists (no `GridIndex` exists to the left of column
+    /// 0).
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let column_9 = GridIndex::new(9, 10);
+    /// assert_eq!(column_9.left(), Some(GridIndex::new(8, 10)));
+    /// let column_0 = GridIndex::new(0, 10);
+    /// assert_eq!(column_0.left(), None);
+    /// ```
+    pub fn left(&self) -> Option<Self> {
+        if self.column() > 0 {
+            Some(Self::new(self.column() - 1, self.row()))
+        } else {
+            None
+        }
+    }
+
     /// Convert this GridIndex into a linear index in a Grid of the given width.
     ///
     /// ## Panics

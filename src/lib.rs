@@ -947,6 +947,143 @@ impl<T> Grid<T> {
         self.indices().map(move |idx| (idx, &self[idx]))
     }
 
+    /// Returns `true` if `idx` is within the bounds of this `Grid`, `false` otherwise.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert!(two_by_two.contains_index(GridIndex::new(1, 1)));
+    /// assert!(!two_by_two.contains_index(GridIndex::new(2, 1)));
+    /// ```
+    pub fn contains_index(&self, idx: GridIndex) -> bool {
+        idx.row() < self.height() && idx.column() < self.width()
+    }
+
+    /// Returns a `Vec` containing the indices of the cardinal neighbors of the cell at `idx`.
+    ///
+    /// Returns the neighbors in clockwise appearance: `[up, right, down, left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(two_by_two.cardinal_neighbor_indices_of((1, 1)),
+    /// vec![GridIndex::new(1, 0), GridIndex::new(0, 1)]);
+    /// ```
+    pub fn cardinal_neighbor_indices_of<I>(&self, idx: I) -> Vec<GridIndex>
+    where
+        GridIndex: From<I>,
+    {
+        let idx = GridIndex::from(idx);
+        let mut neighbors = Vec::with_capacity(4);
+        if let Some(up) = self.up_index(idx) {
+            neighbors.push(up);
+        }
+
+        if let Some(right) = self.right_index(idx) {
+            neighbors.push(right);
+        }
+
+        if let Some(down) = self.down_index(idx) {
+            neighbors.push(down);
+        }
+
+        if let Some(left) = self.left_index(idx) {
+            neighbors.push(left);
+        }
+
+        neighbors
+    }
+
+    /// Returns the `GridIndex` above `idx`, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(two_by_two.up_index((1, 1)), Some(GridIndex::new(1, 0)));
+    /// assert_eq!(two_by_two.up_index((1, 0)), None);
+    /// ```
+    pub fn up_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        if let Some(up) = idx.up() {
+            if self.contains_index(up) {
+                return Some(up);
+            }
+        }
+        None
+    }
+
+    /// Returns the `GridIndex` to the right of `idx`, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(two_by_two.right_index((0, 0)), Some(GridIndex::new(1, 0)));
+    /// assert_eq!(two_by_two.right_index((1, 0)), None);
+    /// ```
+    pub fn right_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        let right = idx.right();
+        if self.contains_index(right) {
+            Some(right)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the `GridIndex` below `idx`, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(two_by_two.down_index((0, 0)), Some(GridIndex::new(0, 1)));
+    /// assert_eq!(two_by_two.down_index((0, 1)), None);
+    /// ```
+    pub fn down_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        let down = idx.down();
+        if self.contains_index(down) {
+            Some(down)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the `GridIndex` to the left of `idx`, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert_eq!(two_by_two.left_index((1, 0)), Some(GridIndex::new(0, 0)));
+    /// assert_eq!(two_by_two.left_index((0, 0)), None);
+    /// ```
+    pub fn left_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        if let Some(left) = idx.left() {
+            if self.contains_index(left) {
+                return Some(left);
+            }
+        }
+        None
+    }
+
     pub(crate) fn take_data(self) -> Vec<T> {
         self.data
     }
