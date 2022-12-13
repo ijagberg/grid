@@ -18,7 +18,65 @@ impl GridIndex {
         self.1
     }
 
-    /// Get the `GridIndex` above, if it exists (no `GridIndex` exists above row 0).
+    /// Returns an iterator over the cardinal and ordinal neighbors of `self`.
+    ///
+    /// Returns the neighbors in clockwise order: `[up, up_right, right, down_right, down, down_left, left, up_left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let idx = GridIndex::new(0, 1);
+    /// let neighbors: Vec<_> = idx.neighbors().collect();
+    /// assert_eq!(neighbors, vec![
+    ///     (0, 0).into(), // up
+    ///     (1, 0).into(), // up_right
+    ///     (1, 1).into(), // right
+    ///     (1, 2).into(), // down_right
+    ///     (0, 2).into(), // down
+    ///                    // nothing to the left since `idx` has column=0
+    /// ]);
+    /// ```
+    pub fn neighbors(self) -> impl Iterator<Item = Self> {
+        use std::iter::once;
+        once::<fn(&Self) -> Option<Self>>(Self::up as _)
+            .chain(once(Self::up_right as _))
+            .chain(once(Self::right as _))
+            .chain(once(Self::down_right as _))
+            .chain(once(Self::down as _))
+            .chain(once(Self::down_left as _))
+            .chain(once(Self::left as _))
+            .chain(once(Self::up_left as _))
+            .map(move |f| f(&self))
+            .filter_map(|i| i)
+    }
+
+    /// Returns an iterator over the cardinal neighbors of `self`.
+    ///
+    /// Returns the neighbors in clockwise order: `[up, right, down, left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::GridIndex;
+    /// let idx = GridIndex::new(0, 1);
+    /// let neighbors: Vec<_> = idx.cardinal_neighbors().collect();
+    /// assert_eq!(neighbors, vec![
+    ///     (0, 0).into(), // up
+    ///     (1, 1).into(), // right
+    ///     (0, 2).into(), // down
+    ///                    // nothing to the left since `idx` has column=0
+    /// ]);
+    /// ```
+    pub fn cardinal_neighbors(self) -> impl Iterator<Item = Self> {
+        use std::iter::once;
+        once::<fn(&Self) -> Option<Self>>(Self::up as _)
+            .chain(once(Self::right as _))
+            .chain(once(Self::down as _))
+            .chain(once(Self::left as _))
+            .map(move |f| f(&self))
+            .filter_map(|i| i)
+    }
+
+    /// Get the `GridIndex` above, if it exists.
     ///
     /// ## Example
     /// ```rust
@@ -36,41 +94,39 @@ impl GridIndex {
         }
     }
 
-    /// Get the `GridIndex` to the right.
-    ///
-    /// ## Notes
-    /// Unlike `up` and `left`, this method does not return an `Option<GridIndex>`, since there is
-    /// always a higher column value. It's unlikely that you will ever have a `Grid` with
-    /// `usize::MAX` rows, but if you did, this method would overflow.
+    /// Get the `GridIndex` to the right, if it exists.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::GridIndex;
     /// let column_17 = GridIndex::new(17, 11);
-    /// assert_eq!(column_17.right(), GridIndex::new(18, 11));
+    /// assert_eq!(column_17.right(), Some(GridIndex::new(18, 11)));
     /// ```
-    pub fn right(&self) -> Self {
-        Self::new(self.column() + 1, self.row())
+    pub fn right(&self) -> Option<Self> {
+        if let Some(right) = self.column().checked_add(1) {
+            Some(Self::new(right, self.row()))
+        } else {
+            None
+        }
     }
 
-    /// Get the `GridIndex` below.
-    ///
-    /// ## Notes
-    /// Unlike `up` and `left`, this method does not return an `Option<GridIndex>`, since there is
-    /// always a higher row value. It's unlikely that you will ever have a `Grid` with `usize::MAX`
-    /// rows, but if you did, this method would overflow.
+    /// Get the `GridIndex` below, if it exists.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::GridIndex;
     /// let row_15 = GridIndex::new(3, 15);
-    /// assert_eq!(row_15.down(), GridIndex::new(3, 16));
+    /// assert_eq!(row_15.down(), Some(GridIndex::new(3, 16)));
     /// ```
-    pub fn down(&self) -> Self {
-        Self::new(self.column(), self.row() + 1)
+    pub fn down(&self) -> Option<Self> {
+        if let Some(down) = self.row().checked_add(1) {
+            Some(Self::new(self.column(), down))
+        } else {
+            None
+        }
     }
 
-    /// Get the `GridIndex` to the left, if it exists (no `GridIndex` exists to the left of column
+    /// Get the `GridIndex` to the left, if it exists.
     /// 0).
     ///
     /// ## Example
@@ -96,11 +152,23 @@ impl GridIndex {
     /// # use simple_grid::{Grid, GridIndex};
     /// let column_5_row_4 = GridIndex::new(5, 4);
     /// assert_eq!(column_5_row_4.up_left(), Some(GridIndex::new(4, 3)));
+    /// let column_0_row_4 = GridIndex::new(0, 4);
+    /// assert_eq!(column_0_row_4.up_left(), None);
     /// ```
     pub fn up_left(&self) -> Option<Self> {
         self.up().map(|up| up.left()).flatten()
     }
 
+    /// Get the `GridIndex` above and to the right, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let column_5_row_4 = GridIndex::new(5, 4);
+    /// assert_eq!(column_5_row_4.up_right(), Some(GridIndex::new(6, 3)));
+    /// let column_5_row_0 = GridIndex::new(5, 0);
+    /// assert_eq!(column_5_row_0.up_right(), None);
+    /// ```
     pub fn up_right(&self) -> Option<Self> {
         if self.row() > 0 {
             Some(Self::new(self.column() + 1, self.row() - 1))
@@ -109,10 +177,33 @@ impl GridIndex {
         }
     }
 
-    pub fn down_right(&self) -> Self {
-        Self::new(self.column() + 1, self.row() + 1)
+    /// Get the `GridIndex` below and to the right, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let column_5_row_4 = GridIndex::new(5, 4);
+    /// assert_eq!(column_5_row_4.down_right(), GridIndex::new(6, 5));
+    /// ```
+    pub fn down_right(&self) -> Option<Self> {
+        if let (Some(right), Some(down)) = (self.column().checked_add(1), self.row().checked_add(1))
+        {
+            Some(Self::new(right, down))
+        } else {
+            None
+        }
     }
 
+    /// Get the `GridIndex` below and to the left, if it exists.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let column_5_row_4 = GridIndex::new(5, 4);
+    /// assert_eq!(column_5_row_4.down_left(), Some(GridIndex::new(4, 5)));
+    /// let column_0_row_0 = GridIndex::new(0, 0);
+    /// assert_eq!(column_0_row_0.down_left(), None);
+    /// ```
     pub fn down_left(&self) -> Option<Self> {
         if self.column() > 0 {
             Some(Self::new(self.column() - 1, self.row() + 1))
@@ -125,7 +216,7 @@ impl GridIndex {
     ///
     /// ## Panics
     /// * If `self.column() >= width`
-    pub(crate) fn to_linear_idx_in(self, width: usize) -> usize {
+    pub(crate) fn to_linear_idx_in(&self, width: usize) -> usize {
         if self.column() >= width {
             panic!(
                 "can't convert {:?} to a linear index in a Grid of width {}",

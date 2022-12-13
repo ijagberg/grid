@@ -170,13 +170,6 @@ impl<T> Grid<T> {
         !self.is_empty() && self.width == self.height
     }
 
-    /// Returns the size of this Grid, panicking if the Grid is not square.
-    fn square_size(&self) -> usize {
-        panic_if_not_square(self);
-
-        self.width()
-    }
-
     fn is_empty(&self) -> bool {
         let ans = self.width == 0 || self.height == 0;
         if ans {
@@ -941,6 +934,8 @@ impl<T> Grid<T> {
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert_eq!(grid.cells_with_indices_iter().collect::<Vec<_>>(), vec![(GridIndex::new(0, 0), &'a'), (GridIndex::new(1, 0), &'b'), (GridIndex::new(0, 1), &'c'), (GridIndex::new(1, 1), &'d')]);
     /// ```
     pub fn cells_with_indices_iter(&self) -> impl DoubleEndedIterator<Item = (GridIndex, &T)> {
@@ -953,6 +948,8 @@ impl<T> Grid<T> {
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert!(two_by_two.contains_index(GridIndex::new(1, 1)));
     /// assert!(!two_by_two.contains_index(GridIndex::new(2, 1)));
     /// ```
@@ -960,45 +957,68 @@ impl<T> Grid<T> {
         idx.row() < self.height() && idx.column() < self.width()
     }
 
-    /// Returns a `Vec` containing the indices of the cardinal neighbors of the cell at `idx`.
+    /// Returns an iterator over the indices of the cardinal and ordinal neighbors of the cell at `idx`.
     ///
-    /// Returns the neighbors in clockwise appearance: `[up, right, down, left]`.
+    /// Returns the neighbors in clockwise order: `[up, up_right, right, down_right, down, down_left, left, up_left]`.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
-    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
-    /// assert_eq!(two_by_two.cardinal_neighbor_indices_of((1, 1)),
-    /// vec![GridIndex::new(1, 0), GridIndex::new(0, 1)]);
+    /// let three_by_three = Grid::new(3, 3, "abcdefghi".chars().collect());
+    /// assert_eq!(three_by_three.neighbor_indices_of((1, 1)), vec![
+    ///     (1, 0).into(), // up
+    ///     (2, 0).into(), // up_right
+    ///     (2, 1).into(), // right
+    ///     (2, 2).into(), // down_right
+    ///     (1, 2).into(), // down
+    ///     (0, 2).into(), // down_left
+    ///     (0, 1).into(), // left
+    ///     (0, 0).into(), // up_left
+    /// ]);
     /// ```
-    pub fn cardinal_neighbor_indices_of<I>(&self, idx: I) -> Vec<GridIndex>
+    pub fn neighbor_indices_of<I>(&'_ self, idx: I) -> impl Iterator<Item = GridIndex> + '_
     where
-        GridIndex: From<I>,
+        I: Into<GridIndex>,
     {
-        let idx = GridIndex::from(idx);
-        let mut neighbors = Vec::with_capacity(4);
-        if let Some(up) = self.up_index(idx) {
-            neighbors.push(up);
-        }
-
-        if let Some(right) = self.right_index(idx) {
-            neighbors.push(right);
-        }
-
-        if let Some(down) = self.down_index(idx) {
-            neighbors.push(down);
-        }
-
-        if let Some(left) = self.left_index(idx) {
-            neighbors.push(left);
-        }
-
-        neighbors
+        let idx: GridIndex = idx.into();
+        idx.neighbors().filter(move |i| self.contains_index(*i))
     }
 
-    /// Returns a `Vec` containing the contents of the cardinal neighbors of the cell at `idx`.
+    /// Returns an iterator over the contents of the cardinal and ordinal neighbors of the cell at `idx`.
     ///
-    /// Returns the neighbors in clockwise appearance: `[up, right, down, left]`.
+    /// Returns the neighbors in clockwise order: `[up, up_right, right, down_right, down, down_left, left, up_left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let three_by_three = Grid::new(3, 3, "abcdefghi".chars().collect());
+    /// // a b c
+    /// // d e f
+    /// // g h i
+    /// let neighbors: Vec<_> = three_by_three.neighbor_cells_of((1, 1)).collect();
+    /// assert_eq!(neighbors, vec![
+    ///     &'b', // up
+    ///     &'c', // up_right
+    ///     &'f', // right
+    ///     &'i', // down_right
+    ///     &'h', // down
+    ///     &'g', // down_left
+    ///     &'d', // left
+    ///     &'a', // up_left
+    /// ]);
+    /// ```
+    pub fn neighbor_cells_of<I>(&self, idx: I) -> impl Iterator<Item = &T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.neighbor_indices_of(idx)
+            .into_iter()
+            .map(move |i| &self[i])
+    }
+
+    /// Returns an iterator over the indices of the cardinal neighbors of the cell at `idx`.
+    ///
+    /// Returns the neighbors in clockwise order: `[up, right, down, left]`.
     ///
     /// ## Example
     /// ```rust
@@ -1006,17 +1026,42 @@ impl<T> Grid<T> {
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
     /// // a b
     /// // c d
-    /// assert_eq!(two_by_two.cardinal_neighbor_cells_of((1, 1)), vec![&'b', &'c']);
+    /// let neighbors: Vec<_> = two_by_two.cardinal_neighbor_indices_of((1, 1)).collect();
+    /// assert_eq!(
+    ///     neighbors,
+    ///     vec![GridIndex::new(1, 0), GridIndex::new(0, 1)]
+    /// );
     /// ```
-    pub fn cardinal_neighbor_cells_of<I>(&self, idx: I) -> Vec<&T>
+    pub fn cardinal_neighbor_indices_of<I>(&'_ self, idx: I) -> impl Iterator<Item = GridIndex> + '_
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        idx.cardinal_neighbors()
+            .filter(move |i| self.contains_index(*i))
+    }
+
+    /// Returns an iterator over the contents of the cardinal neighbors of the cell at `idx`.
+    ///
+    /// Returns the neighbors in clockwise order: `[up, right, down, left]`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// let neighbors: Vec<_> = two_by_two.cardinal_neighbor_cells_of((1, 1)).collect();
+    /// assert_eq!(neighbors, vec![&'b', &'c']);
+    /// ```
+    pub fn cardinal_neighbor_cells_of<I>(&self, idx: I) -> impl Iterator<Item = &T>
     where
         I: Into<GridIndex>,
     {
         let idx: GridIndex = idx.into();
         self.cardinal_neighbor_indices_of(idx)
             .into_iter()
-            .map(|i| &self[i])
-            .collect()
+            .map(move |i| &self[i])
     }
 
     /// Returns the `GridIndex` above `idx`, if it exists.
@@ -1025,6 +1070,8 @@ impl<T> Grid<T> {
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert_eq!(two_by_two.up_index((1, 1)), Some(GridIndex::new(1, 0)));
     /// assert_eq!(two_by_two.up_index((1, 0)), None);
     /// ```
@@ -1041,12 +1088,68 @@ impl<T> Grid<T> {
         None
     }
 
-    /// Returns the `GridIndex` to the right of `idx`, if it exists.
+    /// Returns a reference to the contents of the cell above `idx`, if it exists in this `Grid`.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.up_cell((1, 1)), Some(&'b'));
+    /// assert_eq!(two_by_two.up_cell((1, 0)), None);
+    /// ```
+    pub fn up_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.up_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` above and to the right of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.up_right_index((0, 1)), Some(GridIndex::new(1, 0)));
+    /// assert_eq!(two_by_two.up_right_index((1, 0)), None);
+    /// ```
+    pub fn up_right_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        self.up_index(idx).map(|up| self.right_index(up)).flatten()
+    }
+
+    /// Returns a reference to the contents of the cell above and to the right of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.up_cell((1, 1)), Some(&'b'));
+    /// assert_eq!(two_by_two.up_cell((1, 0)), None);
+    /// ```
+    pub fn up_right_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.up_right_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` to the right of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert_eq!(two_by_two.right_index((0, 0)), Some(GridIndex::new(1, 0)));
     /// assert_eq!(two_by_two.right_index((1, 0)), None);
     /// ```
@@ -1055,7 +1158,7 @@ impl<T> Grid<T> {
         I: Into<GridIndex>,
     {
         let idx: GridIndex = idx.into();
-        let right = idx.right();
+        let right = idx.right()?;
         if self.contains_index(right) {
             Some(right)
         } else {
@@ -1063,12 +1166,74 @@ impl<T> Grid<T> {
         }
     }
 
-    /// Returns the `GridIndex` below `idx`, if it exists.
+    /// Returns a reference to the contents of the cell to the right of `idx`, if it exists in this `Grid`.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.right_cell((0, 1)), Some(&'d'));
+    /// assert_eq!(two_by_two.right_cell((1, 0)), None);
+    /// ```
+    pub fn right_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.right_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` below and to the right of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.down_right_index((0, 0)), Some(GridIndex::new(1,1)));
+    /// assert_eq!(two_by_two.down_right_index((1, 0)), None);
+    /// ```
+    pub fn down_right_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        let down_right = idx.down_right()?;
+        if self.contains_index(down_right) {
+            Some(down_right)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the contents of the cell below and to the right of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.down_right_cell((0, 0)), Some(&'d'));
+    /// assert_eq!(two_by_two.down_right_cell((1, 0)), None);
+    /// ```
+    pub fn down_right_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.down_right_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` below `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert_eq!(two_by_two.down_index((0, 0)), Some(GridIndex::new(0, 1)));
     /// assert_eq!(two_by_two.down_index((0, 1)), None);
     /// ```
@@ -1077,7 +1242,7 @@ impl<T> Grid<T> {
         I: Into<GridIndex>,
     {
         let idx: GridIndex = idx.into();
-        let down = idx.down();
+        let down = idx.down()?;
         if self.contains_index(down) {
             Some(down)
         } else {
@@ -1085,12 +1250,74 @@ impl<T> Grid<T> {
         }
     }
 
-    /// Returns the `GridIndex` to the left of `idx`, if it exists.
+    /// Returns a reference to the contents of the cell below `idx`, if it exists in this `Grid`.
     ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.down_cell((0, 0)), Some(&'c'));
+    /// assert_eq!(two_by_two.down_cell((0, 1)), None);
+    /// ```
+    pub fn down_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.down_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` below and to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.down_left_index((1, 0)), Some(GridIndex::new(0,1)));
+    /// assert_eq!(two_by_two.down_left_index((0, 0)), None);
+    /// ```
+    pub fn down_left_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        let down_left = idx.down_left()?;
+        if self.contains_index(down_left) {
+            Some(down_left)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the contents of the cell below and to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.down_left_cell((1, 0)), Some(&'c'));
+    /// assert_eq!(two_by_two.down_left_cell((0, 0)), None);
+    /// ```
+    pub fn down_left_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.down_left_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
     /// assert_eq!(two_by_two.left_index((1, 0)), Some(GridIndex::new(0, 0)));
     /// assert_eq!(two_by_two.left_index((0, 0)), None);
     /// ```
@@ -1099,12 +1326,72 @@ impl<T> Grid<T> {
         I: Into<GridIndex>,
     {
         let idx: GridIndex = idx.into();
-        if let Some(left) = idx.left() {
-            if self.contains_index(left) {
-                return Some(left);
-            }
+        let left = idx.left()?;
+        if self.contains_index(left) {
+            Some(left)
+        } else {
+            None
         }
-        None
+    }
+
+    /// Returns a reference to the contents of the cell to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.left_cell((1, 0)), Some(&'a'));
+    /// assert_eq!(two_by_two.left_cell((0, 0)), None);
+    /// ```
+    pub fn left_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.left_index(idx).map(|i| &self[i])
+    }
+
+    /// Returns the `GridIndex` above and to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.up_left_index((1, 1)), Some(GridIndex::new(0, 0)));
+    /// assert_eq!(two_by_two.up_left_index((0, 0)), None);
+    /// ```
+    pub fn up_left_index<I>(&self, idx: I) -> Option<GridIndex>
+    where
+        I: Into<GridIndex>,
+    {
+        let idx: GridIndex = idx.into();
+        let up_left = idx.up_left()?;
+        if self.contains_index(up_left) {
+            Some(up_left)
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the contents of the cell above and to the left of `idx`, if it exists in this `Grid`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::{Grid, GridIndex};
+    /// let two_by_two = Grid::new(2, 2, "abcd".chars().collect());
+    /// // a b
+    /// // c d
+    /// assert_eq!(two_by_two.up_left_cell((1, 1)), Some(&'a'));
+    /// assert_eq!(two_by_two.up_left_cell((0, 0)), None);
+    /// ```
+    pub fn up_left_cell<I>(&self, idx: I) -> Option<&T>
+    where
+        I: Into<GridIndex>,
+    {
+        self.up_left_index(idx).map(|i| &self[i])
     }
 
     pub(crate) fn take_data(self) -> Vec<T> {
