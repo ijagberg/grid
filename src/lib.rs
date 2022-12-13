@@ -7,7 +7,11 @@ pub(crate) mod utils;
 
 pub use index::GridIndex;
 use index::LinearIndexError;
-use std::{collections::HashMap, fmt::Display};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 use utils::*;
 
 /// A two-dimensional array, indexed with x-and-y-coordinates (columns and rows).
@@ -1499,7 +1503,7 @@ impl<T> IntoIterator for Grid<T> {
     }
 }
 
-impl<T, I> std::ops::Index<I> for Grid<T>
+impl<T, I> Index<I> for Grid<T>
 where
     GridIndex: From<I>,
 {
@@ -1514,7 +1518,7 @@ where
     }
 }
 
-impl<T, I> std::ops::IndexMut<I> for Grid<T>
+impl<T, I> IndexMut<I> for Grid<T>
 where
     GridIndex: From<I>,
 {
