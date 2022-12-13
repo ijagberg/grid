@@ -183,7 +183,7 @@ impl GridIndex {
     /// ```rust
     /// # use simple_grid::{Grid, GridIndex};
     /// let column_5_row_4 = GridIndex::new(5, 4);
-    /// assert_eq!(column_5_row_4.down_right(), GridIndex::new(6, 5));
+    /// assert_eq!(column_5_row_4.down_right(), Some(GridIndex::new(6, 5)));
     /// ```
     pub fn down_right(&self) -> Option<Self> {
         if let (Some(right), Some(down)) = (self.column().checked_add(1), self.row().checked_add(1))
