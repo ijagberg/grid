@@ -46,8 +46,7 @@ impl GridIndex {
             .chain(once(Self::down_left as _))
             .chain(once(Self::left as _))
             .chain(once(Self::up_left as _))
-            .map(move |f| f(&self))
-            .filter_map(|i| i)
+            .filter_map(move |f| f(&self))
     }
 
     /// Returns an iterator over the cardinal neighbors of `self`.
@@ -72,8 +71,7 @@ impl GridIndex {
             .chain(once(Self::right as _))
             .chain(once(Self::down as _))
             .chain(once(Self::left as _))
-            .map(move |f| f(&self))
-            .filter_map(|i| i)
+            .filter_map(move |f| f(&self))
     }
 
     /// Get the `GridIndex` above, if it exists.
@@ -103,11 +101,9 @@ impl GridIndex {
     /// assert_eq!(column_17.right(), Some(GridIndex::new(18, 11)));
     /// ```
     pub fn right(&self) -> Option<Self> {
-        if let Some(right) = self.column().checked_add(1) {
-            Some(Self::new(right, self.row()))
-        } else {
-            None
-        }
+        self.column()
+            .checked_add(1)
+            .map(|right| Self::new(right, self.row()))
     }
 
     /// Get the `GridIndex` below, if it exists.
@@ -119,11 +115,9 @@ impl GridIndex {
     /// assert_eq!(row_15.down(), Some(GridIndex::new(3, 16)));
     /// ```
     pub fn down(&self) -> Option<Self> {
-        if let Some(down) = self.row().checked_add(1) {
-            Some(Self::new(self.column(), down))
-        } else {
-            None
-        }
+        self.row()
+            .checked_add(1)
+            .map(|down| Self::new(self.column(), down))
     }
 
     /// Get the `GridIndex` to the left, if it exists.
@@ -156,7 +150,7 @@ impl GridIndex {
     /// assert_eq!(column_0_row_4.up_left(), None);
     /// ```
     pub fn up_left(&self) -> Option<Self> {
-        self.up().map(|up| up.left()).flatten()
+        self.up().and_then(|up| up.left())
     }
 
     /// Get the `GridIndex` above and to the right, if it exists.
@@ -216,7 +210,7 @@ impl GridIndex {
     ///
     /// ## Panics
     /// * If `self.column() >= width`
-    pub(crate) fn to_linear_idx_in(&self, width: usize) -> usize {
+    pub(crate) fn to_linear_idx_in(self, width: usize) -> usize {
         if self.column() >= width {
             panic!(
                 "can't convert {:?} to a linear index in a Grid of width {}",
