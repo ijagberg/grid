@@ -10,12 +10,11 @@ categories = ["data-structures"]
 repository = "https://github.com/ijagberg/grid"
 homepage = "https://github.com/ijagberg/grid"
 
-[features]
-linalg = ["num-traits"]
-
 [dependencies]
 serde = { version = "1.0.118", features = ["derive"], optional = true }
-num-traits = { version = "0.2.14", optional = true }
+num-traits = { version = "0.2.16", optional = true }
 
 [dev-dependencies]
+simple-grid = { path = ".", features = ["num-traits"] }
+rational = { path = "/Users/isak/code/rational", features = ["num-traits"] }
 serde_json = "1.0.60"

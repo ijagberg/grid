@@ -1,7 +1,7 @@
 //! A simple and small library for representing two-dimensional grids.
 
 mod index;
-#[cfg(feature = "linalg")]
+#[cfg(feature = "num-traits")]
 pub mod linalg;
 pub(crate) mod utils;
 
@@ -58,6 +58,25 @@ impl<T> Grid<T> {
         }
     }
 
+    /// Create a grid filled with default values.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let grid: Grid<bool> = Grid::new_default(2, 2);
+    /// assert_eq!(grid, Grid::new(2, 2, vec![false, false, false, false]));
+    /// ```
+    pub fn new_default(width: usize, height: usize) -> Grid<T>
+    where
+        T: Default,
+    {
+        let mut data = Vec::with_capacity(width * height);
+        for _ in 0..data.capacity() {
+            data.push(T::default());
+        }
+        Self::new(width, height, data)
+    }
+
     /// Construct a `Grid` from another, by converting each element.
     ///
     /// ## Example
@@ -88,6 +107,22 @@ impl<T> Grid<T> {
     /// Returns the height (number of rows) of the `Grid`.
     pub fn height(&self) -> usize {
         self.height
+    }
+
+    /// Returns `true` if the grid contains some element equal to `value`.
+    ///
+    /// ## Example
+    /// ```
+    /// # use simple_grid::Grid;
+    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
+    /// assert!(grid.contains(&'a'));
+    /// assert!(!grid.contains(&'e'));
+    /// ```
+    pub fn contains(&self, value: &T) -> bool
+    where
+        T: PartialEq,
+    {
+        self.cell_iter().any(|element| element == value)
     }
 
     /// Consumes the `Grid`, creating a new one from a subset of the original.
@@ -171,7 +206,7 @@ impl<T> Grid<T> {
     }
 
     /// Returns the size of this Grid, panicking if the Grid is not square.
-    #[cfg(feature = "linalg")]
+    // #[cfg(feature = "num-traits")]¨
     fn square_size(&self) -> usize {
         panic_if_not_square(self);
 
@@ -931,51 +966,7 @@ impl<T> Grid<T> {
     pub(crate) fn take_data(self) -> Vec<T> {
         self.data
     }
-}
 
-impl<T> Grid<T>
-where
-    T: Default,
-{
-    /// Create a grid filled with default values.
-    ///
-    /// ## Example
-    /// ```rust
-    /// # use simple_grid::Grid;
-    /// let grid: Grid<bool> = Grid::new_default(2, 2);
-    /// assert_eq!(grid, Grid::new(2, 2, vec![false, false, false, false]));
-    /// ```
-    pub fn new_default(width: usize, height: usize) -> Grid<T> {
-        let mut data = Vec::with_capacity(width * height);
-        for _ in 0..data.capacity() {
-            data.push(T::default());
-        }
-        Self::new(width, height, data)
-    }
-}
-
-impl<T> Grid<T>
-where
-    T: PartialEq,
-{
-    /// Returns `true` if the grid contains some element equal to `value`.
-    ///
-    /// ## Example
-    /// ```
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 2, "abcd".chars().collect());
-    /// assert!(grid.contains(&'a'));
-    /// assert!(!grid.contains(&'e'));
-    /// ```
-    pub fn contains(&self, value: &T) -> bool {
-        self.cell_iter().any(|element| element == value)
-    }
-}
-
-impl<T> Grid<T>
-where
-    T: Display,
-{
     /// Format this `Grid` as a string. This can look weird when the `Display` output of `T` has varying length.
     ///
     /// ## Example
@@ -997,7 +988,10 @@ where
     /// // 81  82  83  84  85  86  87  88  89  90
     /// // 91  92  93  94  95  96  97  98  99 100
     /// ```
-    pub fn to_pretty_string(&self) -> String {
+    pub fn to_pretty_string(&self) -> String
+    where
+        T: Display,
+    {
         let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
             let padded_string = |orig: &str| {
                 let mut padding: String = " ".repeat(max_length - orig.len());
