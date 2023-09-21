@@ -1,7 +1,7 @@
 //! A simple and small library for representing two-dimensional grids.
 
 mod index;
-#[cfg(feature = "num-traits")]
+#[cfg(feature = "linalg")]
 pub mod linalg;
 pub(crate) mod utils;
 
@@ -206,7 +206,7 @@ impl<T> Grid<T> {
     }
 
     /// Returns the size of this Grid, panicking if the Grid is not square.
-    // #[cfg(feature = "num-traits")]¨
+    #[cfg(feature = "linalg")]
     fn square_size(&self) -> usize {
         panic_if_not_square(self);
 
