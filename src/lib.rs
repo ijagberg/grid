@@ -1503,6 +1503,16 @@ impl<T> IntoIterator for Grid<T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a Grid<T> {
+    type Item = &'a T;
+
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
 impl<T, I> Index<I> for Grid<T>
 where
     GridIndex: From<I>,
@@ -1611,6 +1621,13 @@ mod tests {
         grid[(0, 2)] = 'y';
 
         assert_grid_equal(&grid, &Grid::new(2, 3, "abxdyf".chars().collect()));
+    }
+
+    #[test]
+    fn iter_test() {
+        let grid = small_example_grid();
+
+        for x in &grid {}
     }
 
     #[test]
