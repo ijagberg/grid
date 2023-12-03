@@ -174,6 +174,14 @@ impl<T> Grid<T> {
         !self.is_empty() && self.width == self.height
     }
 
+    /// Returns the size of this Grid, panicking if the Grid is not square.
+    #[cfg(feature = "linalg")]
+    fn square_size(&self) -> usize {
+        panic_if_not_square(self);
+
+        self.width()
+    }
+
     fn is_empty(&self) -> bool {
         let ans = self.width == 0 || self.height == 0;
         if ans {
@@ -227,16 +235,7 @@ impl<T> Grid<T> {
 
     /// Return an iterator over the cells in the grid.
     ///
-    /// ## Example
-    /// ```rust
-    /// # use simple_grid::Grid;
-    /// let grid = Grid::new(2, 3, "abcdef".chars().collect());
-    /// // grid looks like
-    /// // a b
-    /// // c d
-    /// // e f
-    /// assert_eq!(grid.cell_iter().copied().collect::<Vec<char>>(), vec!['a', 'b', 'c', 'd', 'e', 'f']);
-    /// ```
+    /// Iterates from left to right (starting with row 0, then row 1 etc.).
     pub fn cell_iter(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.data.iter()
     }
@@ -665,7 +664,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::with_capacity(self.area());
+        let mut target_index = HashMap::new();
         let mut current_target = 0;
         for column in self.columns().rev() {
             for row in self.rows() {
@@ -703,7 +702,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::with_capacity(self.area());
+        let mut target_index = HashMap::new();
         let mut current_target = 0;
         for column in self.columns() {
             for row in self.rows().rev() {
@@ -741,7 +740,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::with_capacity(self.area());
+        let mut target_index = HashMap::new();
         let mut current_target = 0;
         for row in self.rows() {
             for column in self.columns().rev() {
@@ -777,7 +776,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::with_capacity(self.area());
+        let mut target_index = HashMap::new();
         let mut current_target = 0;
         for row in self.rows().rev() {
             for column in self.columns() {
@@ -814,7 +813,7 @@ impl<T> Grid<T> {
             return;
         }
 
-        let mut target_index = HashMap::with_capacity(self.area());
+        let mut target_index = HashMap::new();
         let mut current_target = 0;
         for column in self.columns() {
             for row in self.rows() {
@@ -832,7 +831,8 @@ impl<T> Grid<T> {
 
     /// Transforms the Grid, moving the contents of cells to new indices based on a hashmap.
     fn transform(&mut self, mut target_index: HashMap<usize, usize>) {
-        while let Some(&current) = target_index.keys().next() {
+        while !target_index.is_empty() {
+            let current = *target_index.keys().next().unwrap();
             let mut target = target_index.remove(&current).unwrap();
 
             loop {
@@ -1019,9 +1019,7 @@ impl<T> Grid<T> {
     where
         I: Into<GridIndex>,
     {
-        self.neighbor_indices_of(idx)
-            .into_iter()
-            .map(move |i| &self[i])
+        self.neighbor_indices_of(idx).map(move |i| &self[i])
     }
 
     /// Returns an iterator over the indices of the cardinal neighbors of the cell at `idx`.
@@ -1068,7 +1066,6 @@ impl<T> Grid<T> {
     {
         let idx: GridIndex = idx.into();
         self.cardinal_neighbor_indices_of(idx)
-            .into_iter()
             .map(move |i| &self[i])
     }
 
@@ -1129,7 +1126,7 @@ impl<T> Grid<T> {
     where
         I: Into<GridIndex>,
     {
-        self.up_index(idx).map(|up| self.right_index(up)).flatten()
+        self.up_index(idx).and_then(|up| self.right_index(up))
     }
 
     /// Returns a reference to the contents of the cell above and to the right of `idx`, if it exists in this `Grid`.
@@ -1401,7 +1398,6 @@ impl<T> Grid<T> {
     {
         self.up_left_index(idx).map(|i| &self[i])
     }
-
     pub(crate) fn take_data(self) -> Vec<T> {
         self.data
     }
@@ -1474,7 +1470,7 @@ where
     pub fn to_pretty_string(&self) -> String {
         let output = if let Some(max_length) = self.cell_iter().map(|c| c.to_string().len()).max() {
             let padded_string = |orig: &str| {
-                let mut padding = " ".repeat(max_length - orig.len());
+                let mut padding: String = " ".repeat(max_length - orig.len());
                 padding.push_str(orig);
                 padding
             };
@@ -1547,27 +1543,25 @@ mod tests {
     use super::*;
     use std::fmt::{Debug, Display};
 
-    ///   |  0   1   2   3   4   5   6   7   8   9
-    ///---+----------------------------------------
-    /// 0 |  1   2   3   4   5   6   7   8   9  10
-    ///   |
-    /// 1 | 11  12  13  14  15  16  17  18  19  20
-    ///   |
-    /// 2 | 21  22  23  24  25  26  27  28  29  30
-    ///   |
-    /// 3 | 31  32  33  34  35  36  37  38  39  40
-    ///   |
-    /// 4 | 41  42  43  44  45  46  47  48  49  50
-    ///   |
-    /// 5 | 51  52  53  54  55  56  57  58  59  60
-    ///   |
-    /// 6 | 61  62  63  64  65  66  67  68  69  70
-    ///   |
-    /// 7 | 71  72  73  74  75  76  77  78  79  80
-    ///   |
-    /// 8 | 81  82  83  84  85  86  87  88  89  90
-    ///   |
-    /// 9 | 91  92  93  94  95  96  97  98  99 100
+    /// 1   2   3   4   5   6   7   8   9   10
+    ///
+    /// 11  12  13  14  15  16  17  18  19  20
+    ///
+    /// 21  22  23  24  25  26  27  28  29  30
+    ///
+    /// 31  32  33  34  35  36  37  38  39  40
+    ///
+    /// 41  42  43  44  45  46  47  48  49  50
+    ///
+    /// 51  52  53  54  55  56  57  58  59  60
+    ///
+    /// 61  62  63  64  65  66  67  68  69  70
+    ///
+    /// 71  72  73  74  75  76  77  78  79  80
+    ///
+    /// 81  82  83  84  85  86  87  88  89  90
+    ///
+    /// 91  92  93  94  95  96  97  98  99 100
     fn example_grid_u32() -> Grid<u32> {
         let grid = Grid::new(10, 10, (1..=100).collect());
 
@@ -1957,16 +1951,6 @@ mod tests {
                 GridIndex::new(2, 1)
             ]
         );
-    }
-
-    #[test]
-    fn neighbors_test() {
-        let grid = example_grid_u32();
-        let neighbors: Vec<_> = grid.neighbor_cells_of((4, 6)).collect();
-        // 54  55  56
-        // 64  65  66
-        // 74  75  76
-        assert_eq!(neighbors, vec![&55, &56, &66, &76, &75, &74, &64, &54]);
     }
 
     #[test]

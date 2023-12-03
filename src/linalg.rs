@@ -2,15 +2,6 @@ use crate::{utils::*, Grid};
 use num_traits::{Float, Num};
 use std::fmt::Debug;
 
-impl<T> Grid<T> {
-    /// Returns the size of this Grid, panicking if the Grid is not square.
-    fn square_size(&self) -> usize {
-        panic_if_not_square(self);
-
-        self.width()
-    }
-}
-
 impl<T> Grid<T>
 where
     T: Num + Copy,

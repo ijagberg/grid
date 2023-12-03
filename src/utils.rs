@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::{Grid, GridIndex};
 
 #[inline(always)]
