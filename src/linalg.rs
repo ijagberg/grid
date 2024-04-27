@@ -1,11 +1,68 @@
 use crate::{utils::*, Grid};
-use num_traits::{Float, Num};
-use std::fmt::Debug;
+use num_traits::{Num, One, Zero};
+use std::{
+    fmt::Debug,
+    ops::{Add, Div, Mul, Neg, Sub},
+};
 
-impl<T> Grid<T>
-where
-    T: Num + Copy,
-{
+impl<T> Grid<T> {
+    /// Removes a given column and row from the grid, returning the remaining grid.
+    ///
+    /// ## Example
+    /// ```rust,ignore
+    /// # use simple_grid::Grid;
+    /// let abcdef = Grid::new(3, 2, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+    /// let minor = abcdef.minor(2, 1); // remove the last column and last row
+    /// assert_eq!(minor, Grid::new(2, 1, vec!['a', 'b']));
+    /// ```
+    fn minor(mut self, skip_column: usize, skip_row: usize) -> Grid<T> {
+        self.remove_column(skip_column);
+        self.remove_row(skip_row);
+        return self;
+    }
+
+    /// Calculate the determinant of a square `Grid`.
+    ///
+    /// ## Panics
+    /// * If `self` is not a square grid.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let two_by_two = Grid::new(2, 2, vec![3, 8, 4, 6]);
+    /// assert_eq!(two_by_two.determinant(), -14);
+    /// ```
+    pub fn determinant(&self) -> T
+    where
+        T: One + Clone,
+        for<'a> &'a T: Add<Output = T> + Sub<Output = T>,
+    {
+        if self.is_empty() {
+            // determinant of an empty grid is 1
+            return T::one();
+        }
+        panic_if_not_square(self);
+
+        if self.dimensions() == (1, 1) {
+            return self[(0, 0)].clone();
+        }
+
+        let mut sum: Option<T> = None;
+
+        for column in self.columns() {
+            let scalar = self[(column, 0)].clone();
+            let minor = self.clone().minor(column, 0);
+            let product = scalar * minor.determinant();
+            match (sum, column % 2 == 0) {
+                (Some(s), true) => sum = Some(&s + &product),
+                (Some(s), false) => sum = Some(&s - &product),
+                (None, _) => sum = Some(product),
+            }
+        }
+
+        sum.unwrap()
+    }
+
     /// Generate the identity matrix of size `size`.
     ///
     /// ## Panics
@@ -22,7 +79,10 @@ where
     /// // 0 1 0
     /// // 0 0 1
     /// ```
-    pub fn identity(size: usize) -> Self {
+    pub fn identity(size: usize) -> Self
+    where
+        T: One + Zero,
+    {
         if size == 0 {
             panic!("can't create an identity matrix of size 0");
         }
@@ -40,21 +100,6 @@ where
         Self::new(size, size, data)
     }
 
-    /// Removes a given column and row from the grid, returning the remaining grid.
-    fn minor(&self, skip_column: usize, skip_row: usize) -> Grid<T> {
-        let mut new_vec: Vec<T> = Vec::with_capacity((self.width - 1) * (self.height - 1));
-
-        for row in self.rows() {
-            for column in self.columns() {
-                if row != skip_row && column != skip_column {
-                    new_vec.push(self[(column, row)]);
-                }
-            }
-        }
-
-        Grid::new(self.width - 1, self.height - 1, new_vec)
-    }
-
     /// Multiply all elements in a row by some factor.
     ///
     /// ## Panics
@@ -68,24 +113,30 @@ where
     /// assert_eq!(g[(0, 1)], 20);
     /// assert_eq!(g[(1, 1)], 30);
     /// ```
-    pub fn multiply_row(&mut self, row: usize, factor: T) {
+    pub fn multiply_row(&mut self, row: usize, factor: T)
+    where
+        for<'a> &'a T: Mul<Output = T>,
+    {
         panic_if_row_out_of_bounds(self, row);
 
         for column in self.columns() {
-            self[(column, row)] = self[(column, row)] * factor;
+            self[(column, row)] = &self[(column, row)] * &factor;
         }
     }
 
     /// Perform the following row operation:
     /// 1. Take the contents of row `source_row`, multiplied by `factor`.
     /// 2. Add the result to row `target_row`.
-    fn add_to_row(&mut self, target_row: usize, source_row: usize, factor: T) {
+    fn add_to_row(&mut self, target_row: usize, source_row: usize, factor: T)
+    where
+        for<'a> &'a T: Mul<Output = T> + Add<Output = T>,
+    {
         panic_if_row_out_of_bounds(self, target_row);
         panic_if_row_out_of_bounds(self, source_row);
 
         for column in self.columns() {
             self[(column, target_row)] =
-                self[(column, target_row)] + (self[(column, source_row)] * factor);
+                &self[(column, target_row)] + &(&self[(column, source_row)] * &factor);
         }
     }
 
@@ -93,7 +144,10 @@ where
     ///
     /// ## Notes
     /// * A non-square matrix is never symmetric
-    pub fn is_symmetric(&self) -> bool {
+    pub fn is_symmetric(&self) -> bool
+    where
+        T: PartialEq,
+    {
         if !self.is_square() {
             false
         } else {
@@ -111,51 +165,17 @@ where
     ///
     /// ## Panics
     /// * If `self` is not a square grid.
-    pub fn trace(&self) -> T {
+    pub fn trace(&self) -> T
+    where
+        T: Zero,
+        for<'a> &'a T: Add<Output = T>,
+    {
         let mut sum = T::zero();
         for n in 0..self.square_size() {
-            sum = sum + self[(n, n)];
+            sum = &sum + &self[(n, n)];
         }
 
         sum
-    }
-
-    /// Calculate the determinant of a square `Grid`.
-    ///
-    /// ## Panics
-    /// * If `self` is not a square grid.
-    ///
-    /// ## Example
-    /// ```rust
-    /// # use simple_grid::Grid;
-    /// let two_by_two = Grid::new(2, 2, vec![3, 8, 4, 6]);
-    /// assert_eq!(two_by_two.determinant(), -14);
-    /// ```
-    pub fn determinant(&self) -> T {
-        if self.is_empty() {
-            // determinant of an empty grid is 1
-            return T::one();
-        }
-        panic_if_not_square(self);
-
-        if self.dimensions() == (1, 1) {
-            return self[(0, 0)];
-        }
-
-        let mut sum: Option<T> = None;
-
-        for column in self.columns() {
-            let scalar = self[(column, 0)];
-            let minor = self.minor(column, 0);
-            let product = scalar * minor.determinant();
-            match (sum, column % 2 == 0) {
-                (Some(s), true) => sum = Some(s + product),
-                (Some(s), false) => sum = Some(s - product),
-                (None, _) => sum = Some(product),
-            }
-        }
-
-        sum.unwrap()
     }
 
     /// Returns `true` if all elements below the diagonal are zero.
@@ -163,7 +183,10 @@ where
     /// ## Panics
     /// * If `self` is empty.
     /// * If `self` is not a square grid.
-    pub fn is_upper_triangular(&self) -> bool {
+    pub fn is_upper_triangular(&self) -> bool
+    where
+        T: Zero + PartialEq,
+    {
         panic_if_empty(self);
         panic_if_not_square(self);
 
@@ -183,7 +206,10 @@ where
     /// ## Panics
     /// * If `self` is empty.
     /// * If `self` is not a square grid.
-    pub fn is_lower_triangular(&self) -> bool {
+    pub fn is_lower_triangular(&self) -> bool
+    where
+        T: Zero + PartialEq,
+    {
         panic_if_empty(self);
         panic_if_not_square(self);
 
@@ -203,43 +229,96 @@ where
     /// ## Panics
     /// * If `self` is empty.
     /// * If `self` is not a square grid.
-    pub fn is_triangular(&self) -> bool {
+    pub fn is_triangular(&self) -> bool
+    where
+        T: Zero + PartialEq,
+    {
         self.is_upper_triangular() && self.is_lower_triangular()
     }
 
     /// Returns `true` if all elements in the grid are zero.
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(&self) -> bool
+    where
+        T: Zero + PartialEq,
+    {
         self.cell_iter().all(|c| c == &T::zero())
     }
-}
 
-impl<T> Grid<T>
-where
-    T: Float,
-{
-    /// Check this grid and another for equality, using an epsilon.
-    ///
-    /// Useful when dealing with matrices containing floating point values.
+    /// Perform a Gaussian elimination, treating the rightmost column as the solutions to linear equations represented by the other columns.
     ///
     /// ## Example
+    /// To solve the following system:
+    ///
+    /// `2x + y - z = 8`
+    ///
+    /// `-3x - y + 2z = -11`
+    ///
+    /// `-2x + y + 2z = -3`
     /// ```rust
     /// # use simple_grid::Grid;
-    /// let a = Grid::new(2, 2, vec![1.5, 2., -5., 0.333333333]);
-    /// let b = Grid::new(2, 2, vec![3./2., 4.0_f64.sqrt(), -3.0 - 2.0, 1.0/3.0]);
-    /// assert!(a.equal_by_epsilon(&b, 0.000000001));
+    /// let mut grid = Grid::new(4, 3, vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.]);
+    /// let solution = grid.gaussian_elimination();
+    /// assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
     /// ```
-    pub fn equal_by_epsilon(&self, other: &Grid<T>, epsilon: T) -> bool {
-        if self.dimensions() != other.dimensions() {
-            false
-        } else {
-            for idx in self.indices() {
-                let diff = (self[idx] - other[idx]).abs();
-                if diff > epsilon {
-                    return false;
+    pub fn gaussian_elimination(&mut self) -> GaussianEliminationResult<T>
+    where
+        T: One + Zero + PartialEq + Clone,
+        for<'a> &'a T: Mul<Output = T> + Add<Output = T> + Div<Output = T> + Neg<Output = T>,
+    {
+        for steps in 0..self.width - 1 {
+            // find leftmost non-zero column
+            let col = match (steps..self.width - 1)
+                .find(|&c| !self.is_part_of_column_zero(c, steps, self.height - 1))
+            {
+                Some(col) => col,
+                None => {
+                    break;
+                }
+            };
+
+            let row = (steps..self.height)
+                .find(|&r| self[(col, r)] != T::zero())
+                .unwrap();
+
+            self.swap_rows(steps, row);
+
+            // multiply row so that first element is 1
+            let factor = &T::one() / &self[(col, steps)];
+            self.multiply_row(steps, factor);
+
+            for r in steps + 1..self.height {
+                let factor = -&self[(col, r)];
+                self.add_to_row(r, steps, factor);
+            }
+        }
+
+        for row in self.rows().rev() {
+            let non_zero_col = match (0..self.width - 1).find(|&c| self[(c, row)] != T::zero()) {
+                Some(col) => col,
+                None => {
+                    continue;
+                }
+            };
+
+            for r in 0..row {
+                let factor = -&self[(non_zero_col, r)];
+
+                self.add_to_row(r, row, factor);
+            }
+        }
+
+        for row in self.rows() {
+            if (0..self.width - 1).all(|column| self[(column, row)] == T::zero()) {
+                if self[(self.width - 1, row)] != T::zero() {
+                    return GaussianEliminationResult::NoSolution;
+                } else {
+                    return GaussianEliminationResult::InfiniteSolutions;
                 }
             }
-            true
         }
+
+        let solutions = self.column_iter(self.width - 1).cloned().collect();
+        GaussianEliminationResult::SingleSolution(solutions)
     }
 
     /// Finds the inverse (if it exists) for a square matrix.
@@ -260,7 +339,12 @@ where
     /// let inverse = invertible.inverse().unwrap();
     /// assert!(inverse.equal_by_epsilon(&Grid::new(3, 3, vec![0.2, 0.2, 0., -0.2, 0.3, 1.0, 0.2, -0.3, 0.]), 1e-6));
     /// ```
-    pub fn inverse(mut self) -> Option<Grid<T>> {
+    pub fn inverse(mut self) -> Option<Grid<T>>
+    where
+        T: Clone + Zero + One + PartialEq,
+        for<'a> &'a T:
+            Add<Output = T> + Sub<Output = T> + Neg<Output = T> + Div<Output = T> + Mul<Output = T>,
+    {
         panic_if_not_square(&self);
         if self.determinant() == T::zero() {
             return None;
@@ -286,13 +370,13 @@ where
             identity.swap_rows(steps, row);
 
             // multiply row so that first element is 1
-            let factor = T::one() / self[(col, steps)];
-            self.multiply_row(steps, factor);
+            let factor = &T::one() / &self[(col, steps)].clone();
+            self.multiply_row(steps, factor.clone());
             identity.multiply_row(steps, factor);
 
             for r in steps + 1..self.height {
-                let factor = -self[(col, r)];
-                self.add_to_row(r, steps, factor);
+                let factor = -&self[(col, r)];
+                self.add_to_row(r, steps, factor.clone());
                 identity.add_to_row(r, steps, factor);
             }
         }
@@ -306,8 +390,8 @@ where
             };
 
             for r in 0..row {
-                let factor = -self[(non_zero_col, r)];
-                self.add_to_row(r, row, factor);
+                let factor = -&self[(non_zero_col, r)];
+                self.add_to_row(r, row, factor.clone());
                 identity.add_to_row(r, row, factor);
             }
         }
@@ -315,77 +399,38 @@ where
         Some(identity)
     }
 
-    /// Perform a Gaussian elimination, treating the rightmost column as the solutions to linear equations represented by the other columns.
+    /// Check this grid and another for equality, using an epsilon.
+    ///
+    /// Useful when dealing with matrices containing floating point values.
     ///
     /// ## Example
-    /// To solve the following system:
-    ///
-    /// `2x + y - z = 8`
-    ///
-    /// `-3x - y + 2z = -11`
-    ///
-    /// `-2x + y + 2z = -3`
     /// ```rust
     /// # use simple_grid::Grid;
-    /// let mut grid = Grid::new(4, 3, vec![2., 1., -1., 8., -3., -1., 2., -11., -2., 1., 2., -3.]);
-    /// let solution = grid.gaussian_elimination();
-    /// assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
+    /// let a = Grid::new(2, 2, vec![1.5, 2., -5., 0.333333333]);
+    /// let b = Grid::new(2, 2, vec![3./2., 4.0_f64.sqrt(), -3.0 - 2.0, 1.0/3.0]);
+    /// assert!(a.equal_by_epsilon(&b, 0.000000001));
     /// ```
-    pub fn gaussian_elimination(&mut self) -> GaussianEliminationResult<T> {
-        for steps in 0..self.width - 1 {
-            // find leftmost non-zero column
-            let col = match (steps..self.width - 1)
-                .find(|&c| !self.is_part_of_column_zero(c, steps, self.height - 1))
-            {
-                Some(col) => col,
-                None => {
-                    break;
-                }
-            };
-
-            let row = (steps..self.height)
-                .find(|&r| self[(col, r)] != T::zero())
-                .unwrap();
-
-            self.swap_rows(steps, row);
-
-            // multiply row so that first element is 1
-            let factor = T::one() / self[(col, steps)];
-            self.multiply_row(steps, factor);
-
-            for r in steps + 1..self.height {
-                let factor = -self[(col, r)];
-                self.add_to_row(r, steps, factor);
-            }
-        }
-
-        for row in self.rows().rev() {
-            let non_zero_col = match (0..self.width - 1).find(|&c| self[(c, row)] != T::zero()) {
-                Some(col) => col,
-                None => {
-                    continue;
-                }
-            };
-
-            for r in 0..row {
-                let factor = -self[(non_zero_col, r)];
-
-                self.add_to_row(r, row, factor);
-            }
-        }
-
-        for row in self.rows() {
-            if (0..self.width - 1).all(|column| self[(column, row)] == T::zero()) {
-                if self[(self.width - 1, row)] != T::zero() {
-                    return GaussianEliminationResult::NoSolution;
+    pub fn equal_by_epsilon(&self, other: &Grid<T>, epsilon: T) -> bool
+    where
+        T: PartialOrd,
+        for<'a> &'a T: Sub<Output = T>,
+    {
+        if self.dimensions() != other.dimensions() {
+            false
+        } else {
+            for idx in self.indices() {
+                let diff = if self[idx] > other[idx] {
+                    &self[idx] - &other[idx]
                 } else {
-                    return GaussianEliminationResult::InfiniteSolutions;
+                    &other[idx] - &self[idx]
+                };
+                // let diff = (self[idx] - other[idx]).abs();
+                if diff > epsilon {
+                    return false;
                 }
             }
+            true
         }
-
-        let solutions = self.column_iter(self.width - 1).copied().collect();
-        GaussianEliminationResult::SingleSolution(solutions)
     }
 
     /// Returns `true` if elements in the range `row_start..=row_end` in `column` are all zero.
@@ -394,7 +439,10 @@ where
     /// * If `column` is out of bounds.
     /// * If `row_start` is out of bounds.
     /// * If `row_end` is out of bounds.
-    fn is_part_of_column_zero(&self, column: usize, row_start: usize, row_end: usize) -> bool {
+    fn is_part_of_column_zero(&self, column: usize, row_start: usize, row_end: usize) -> bool
+    where
+        T: Zero + PartialEq,
+    {
         panic_if_column_out_of_bounds(self, column);
         panic_if_row_out_of_bounds(self, row_start);
         panic_if_row_out_of_bounds(self, row_end);
@@ -555,6 +603,7 @@ pub enum GaussianEliminationResult<T> {
 
 impl<T> GaussianEliminationResult<T> {
     /// Unwrap the single solution to a linear equation, panicking if there were zero or infinite solutions.
+    #[must_use]
     pub fn unwrap_single_solution(self) -> Vec<T> {
         match self {
             GaussianEliminationResult::InfiniteSolutions => {
@@ -565,6 +614,30 @@ impl<T> GaussianEliminationResult<T> {
                 panic!("result has no solutions")
             }
         }
+    }
+
+    /// Returns `true` if the gaussian elimination result is [`InfiniteSolutions`].
+    ///
+    /// [`InfiniteSolutions`]: GaussianEliminationResult::InfiniteSolutions
+    #[must_use]
+    pub fn is_infinite_solutions(&self) -> bool {
+        matches!(self, Self::InfiniteSolutions)
+    }
+
+    /// Returns `true` if the gaussian elimination result is [`NoSolution`].
+    ///
+    /// [`NoSolution`]: GaussianEliminationResult::NoSolution
+    #[must_use]
+    pub fn is_no_solution(&self) -> bool {
+        matches!(self, Self::NoSolution)
+    }
+
+    /// Returns `true` if the gaussian elimination result is [`SingleSolution`].
+    ///
+    /// [`SingleSolution`]: GaussianEliminationResult::SingleSolution
+    #[must_use]
+    pub fn is_single_solution(&self) -> bool {
+        matches!(self, Self::SingleSolution(..))
     }
 }
 
@@ -871,6 +944,13 @@ mod tests {
         );
         let solution = grid.gaussian_elimination();
         assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
+    }
+
+    #[test]
+    fn minor_test() {
+        let abcdef = Grid::new(3, 2, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+        let minor = abcdef.minor(2, 1); // remove the last column and last row
+        assert_eq!(minor, Grid::new(2, 1, vec!['a', 'b']));
     }
 
     fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>
