@@ -18,7 +18,7 @@ impl<T> Grid<T> {
     fn minor(mut self, skip_column: usize, skip_row: usize) -> Grid<T> {
         self.remove_column(skip_column);
         self.remove_row(skip_row);
-        return self;
+        self
     }
 
     /// Calculate the determinant of a square `Grid`.
