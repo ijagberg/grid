@@ -192,7 +192,9 @@ impl<T> Grid<T> {
 
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
-    /// Note: an empty Grid is not square (even though columns and rows is 0).
+    /// ## Note
+    /// An empty Grid is not square (even though columns and rows is 0).
+    /// 
     /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;

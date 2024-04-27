@@ -7,21 +7,18 @@ use std::{
 
 impl<T> Grid<T> {
     /// Removes a given column and row from the grid, returning the remaining grid.
-    fn minor(&self, skip_column: usize, skip_row: usize) -> Grid<T>
-    where
-        T: Clone,
-    {
-        let mut new_vec: Vec<T> = Vec::with_capacity((self.width - 1) * (self.height - 1));
-
-        for row in self.rows() {
-            for column in self.columns() {
-                if row != skip_row && column != skip_column {
-                    new_vec.push(self[(column, row)].clone());
-                }
-            }
-        }
-
-        Grid::new(self.width - 1, self.height - 1, new_vec)
+    ///
+    /// ## Example
+    /// ```rust,ignore
+    /// # use simple_grid::Grid;
+    /// let abcdef = Grid::new(3, 2, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+    /// let minor = abcdef.minor(2, 1); // remove the last column and last row
+    /// assert_eq!(minor, Grid::new(2, 1, vec!['a', 'b']));
+    /// ```
+    fn minor(mut self, skip_column: usize, skip_row: usize) -> Grid<T> {
+        self.remove_column(skip_column);
+        self.remove_row(skip_row);
+        return self;
     }
 
     /// Calculate the determinant of a square `Grid`.
@@ -54,7 +51,7 @@ impl<T> Grid<T> {
 
         for column in self.columns() {
             let scalar = self[(column, 0)].clone();
-            let minor = self.minor(column, 0);
+            let minor = self.clone().minor(column, 0);
             let product = scalar * minor.determinant();
             match (sum, column % 2 == 0) {
                 (Some(s), true) => sum = Some(&s + &product),
@@ -947,6 +944,13 @@ mod tests {
         );
         let solution = grid.gaussian_elimination();
         assert_eq!(solution.unwrap_single_solution(), vec![2., 3., -1.])
+    }
+
+    #[test]
+    fn minor_test() {
+        let abcdef = Grid::new(3, 2, vec!['a', 'b', 'c', 'd', 'e', 'f']);
+        let minor = abcdef.minor(2, 1); // remove the last column and last row
+        assert_eq!(minor, Grid::new(2, 1, vec!['a', 'b']));
     }
 
     fn float_grid<T>(width: usize, height: usize, data: Vec<T>) -> Grid<f64>

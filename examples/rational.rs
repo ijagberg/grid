@@ -43,7 +43,11 @@ fn main() {
                     equation[(2, row)],
                     z,
                     equation[(3, row)]
-                )
+                );
+                assert_eq!(
+                    x * equation[(0, row)] + y * equation[(1, row)] + z * equation[(2, row)],
+                    equation[(3, row)]
+                );
             }
         }
         GaussianEliminationResult::NoSolution => println!("none"),
