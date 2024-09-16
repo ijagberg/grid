@@ -21,6 +21,13 @@ impl<T> Grid<T> {
         self
     }
 
+    /// Returns the size of this Grid, panicking if the Grid is not square.
+    fn square_size(&self) -> usize {
+        panic_if_not_square(self);
+
+        self.width()
+    }
+
     /// Calculate the determinant of a square `Grid`.
     ///
     /// ## Panics

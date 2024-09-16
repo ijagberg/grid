@@ -64,6 +64,21 @@ pub(crate) fn panic_if_row_length_is_not_equal_to_width<T>(grid: &Grid<T>, row_l
 }
 
 #[inline(always)]
+pub(crate) fn panic_if_width_times_height_is_not_equal_to_data_len(
+    width: usize,
+    height: usize,
+    data_len: usize,
+) {
+    if width * height != data_len {
+        panic!(
+            "width * height was {}, but must be equal to data.len(), which was {}",
+            width * height,
+            data_len
+        );
+    }
+}
+
+#[inline(always)]
 pub(crate) fn panic_if_width_xor_height_is_zero(width: usize, height: usize) {
     if (width == 0) ^ (height == 0) {
         panic!("if either width or height is 0, both must be 0");

@@ -46,13 +46,7 @@ impl<T> Grid<T> {
     /// // e f
     /// ```
     pub fn new(width: usize, height: usize, data: Vec<T>) -> Self {
-        if width * height != data.len() {
-            panic!(
-                "width * height was {}, but must be equal to data.len(), which was {}",
-                width * height,
-                data.len()
-            );
-        }
+        panic_if_width_times_height_is_not_equal_to_data_len(width, height, data.len());
         panic_if_width_xor_height_is_zero(width, height);
 
         Self {
@@ -194,11 +188,36 @@ impl<T> Grid<T> {
         (self.width, self.height)
     }
 
+    /// Set new dimensions for the `Grid`.
+    ///
+    /// ## Panics
+    /// * If the new width and height don't match the current length of the underlying vector.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use simple_grid::Grid;
+    /// let mut grid: Grid<u32> = Grid::new(6, 6, (0..36).collect());
+    /// assert_eq!(grid.dimensions(), (6, 6));
+    ///
+    /// // 6*6 = 2*18, so this is fine
+    /// grid.set_dimensions(2, 18);
+    /// assert_eq!(grid.dimensions(), (2, 18));
+    ///
+    /// // but this would panic
+    /// // grid.set_dimensions(2, 17);
+    /// ```
+    pub fn set_dimensions(&mut self, width: usize, height: usize) {
+        panic_if_width_times_height_is_not_equal_to_data_len(width, height, self.data.len());
+
+        self.width = width;
+        self.height = height;
+    }
+
     /// Checks if the Grid is square (number of columns and rows is equal).
     ///
     /// ## Note
     /// An empty Grid is not square (even though columns and rows is 0).
-    /// 
+    ///
     /// ## Example
     /// ```rust
     /// # use simple_grid::Grid;
@@ -209,14 +228,6 @@ impl<T> Grid<T> {
     /// ```
     pub fn is_square(&self) -> bool {
         !self.is_empty() && self.width == self.height
-    }
-
-    /// Returns the size of this Grid, panicking if the Grid is not square.
-    #[cfg(feature = "linalg")]
-    fn square_size(&self) -> usize {
-        panic_if_not_square(self);
-
-        self.width()
     }
 
     fn is_empty(&self) -> bool {
@@ -902,7 +913,9 @@ impl<T> Grid<T> {
         idx.to_linear_idx_in(self.width)
     }
 
-    /// Return an iterator over the row indices in this grid. Allows you to write `for row in grid.rows()` instead of `for row in 0..grid.height()`.
+    /// Return an iterator over the row indices in this grid.
+    ///
+    /// Allows you to write `for row in grid.rows()` instead of `for row in 0..grid.height()`.
     ///
     /// ## Example
     /// ```rust
@@ -915,7 +928,9 @@ impl<T> Grid<T> {
         0..self.height
     }
 
-    /// Return an iterator over the column indices in this grid. Allows you to write `for column in grid.columns()` instead of `for column in 0..grid.width()`.
+    /// Return an iterator over the column indices in this grid.
+    ///
+    /// Allows you to write `for column in grid.columns()` instead of `for column in 0..grid.width()`.
     ///
     /// ## Example
     /// ```rust
@@ -954,7 +969,9 @@ impl<T> Grid<T> {
         None
     }
 
-    /// Return an iterator over the cell indices in this grid. Iterates from top to bottom, left to right.
+    /// Return an iterator over the cell indices in this grid.
+    ///
+    /// Iterates from left to right (through row 0 followed by row 1 etc.).
     ///
     /// ## Example
     /// ```rust
@@ -1435,6 +1452,7 @@ impl<T> Grid<T> {
     {
         self.up_left_index(idx).map(|i| &self[i])
     }
+
     pub(crate) fn take_data(self) -> Vec<T> {
         self.data
     }
@@ -1450,7 +1468,6 @@ where
     /// ```rust
     /// # use simple_grid::Grid;
     /// let grid = Grid::new(10, 10, (1..=100).collect::<Vec<u32>>());
-    /// assert_eq!(grid.get((5, 2)).unwrap(), &26);
     ///
     /// println!("{}", grid.to_pretty_string());
     /// // prints:

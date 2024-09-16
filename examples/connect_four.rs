@@ -1,6 +1,5 @@
-use std::{fmt::Display, option::Option};
-
 use simple_grid::{Grid, GridIndex};
+use std::{fmt::Display, option::Option};
 use Color::*;
 
 type Board = Grid<Cell>;
@@ -34,16 +33,20 @@ fn main() {
 }
 
 fn print_board(board: &Board) {
+    let header: String = format!(
+        " {} ",
+        (0..7).map(|c| format!("{c}")).collect::<Vec<_>>().join(" ")
+    );
+    println!("{header}");
     for row in board.rows() {
-        println!(
-            "{}",
-            board
-                .row_iter(row)
-                .map(|c| format!("{}", c))
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
+        let middle = board
+            .row_iter(row)
+            .map(|c| format!("{}", c))
+            .collect::<Vec<_>>()
+            .join("|");
+        println!("|{}|", middle);
     }
+    println!("¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯");
 }
 
 fn get_position_from_stdin(board: &Board) -> GridIndex {
@@ -166,7 +169,7 @@ impl Default for Cell {
 impl Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match self {
-            Cell::Empty => "O",
+            Cell::Empty => " ",
             Cell::Filled(Yellow) => "Y",
             Cell::Filled(Red) => "R",
         };
